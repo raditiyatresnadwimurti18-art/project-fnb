@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'auth_provider.dart';
 
-import '../features/auth/login_page.dart';
-import '../features/admin/admin_dashboard_page.dart';
-import '../features/pos/pos_dashboard_page.dart';
+import 'package:go_router/go_router.dart';
+import '../providers/auth_provider.dart';
+
+import '../pages/login_page.dart';
+import '../pages/admin_dashboard_page.dart';
+import '../pages/pos_dashboard_page.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
