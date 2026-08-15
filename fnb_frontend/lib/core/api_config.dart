@@ -3,7 +3,8 @@ class ApiConfig {
   // static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   //INI ADALAH API UTAMA
-  static const String baseUrl = 'http://104.197.222.12/api';
+  static const String baseUrl =
+      'https://potato-das-random-annual.trycloudflare.com/api';
 
   static const String menus = '$baseUrl/menus';
   static const String promos = '$baseUrl/promos';
