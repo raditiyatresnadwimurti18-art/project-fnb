@@ -128,3 +128,7 @@ Semua endpoint memiliki awalan `/api`. Response dikembalikan murni dalam bentuk 
 | POST | `/transactions/calculate` | **Engine Kalkulasi:** Menghitung total pesanan dan memotong diskon tanpa menyimpan transaksi (Sangat berguna untuk fitur *Live Cart Preview* di Flutter). |
 | POST | `/transactions` | **Checkout:** Memproses pembayaran, menyimpan data, memotong kuota promo, menghitung kembalian, & membuat struk akhir (invoice). |
 | GET | `/transactions/{invoice_number}`| Menampilkan ulang struk transaksi sebelumnya berdasarkan nomor nota. |
+
+
+(UNTUK UPDATE VPS LINUX GUNAKAN PERINTAH)
+[sudo ./update.sh]
