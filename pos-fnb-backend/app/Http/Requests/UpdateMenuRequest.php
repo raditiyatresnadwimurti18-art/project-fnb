@@ -15,16 +15,11 @@ class UpdateMenuRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'kode_menu' => [
-                'sometimes',
-                'required',
-                'string',
-                Rule::unique('menus', 'kode_menu')->ignore($this->route('menu'))->whereNull('deleted_at')
-            ],
             'nama_menu' => 'sometimes|required|string|max:255',
             'kategori' => 'sometimes|required|string|max:255',
             'deskripsi' => 'nullable|string',
-            'gambar' => 'nullable|url',
+            'gambar' => 'nullable|string',
+            'modal' => 'sometimes|required|numeric|min:0',
             'is_active' => 'boolean',
         ];
     }

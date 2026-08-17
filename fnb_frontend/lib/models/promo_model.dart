@@ -9,6 +9,7 @@ class PromoModel {
   final DateTime startDate;
   final DateTime endDate;
   final int quota;
+  final int usedQuota;
   final bool isActive;
   // BOGO Fields
   final int? buyQty;
@@ -26,6 +27,7 @@ class PromoModel {
     required this.startDate,
     required this.endDate,
     required this.quota,
+    this.usedQuota = 0,
     required this.isActive,
     this.buyQty,
     this.freeQty,
@@ -44,6 +46,7 @@ class PromoModel {
       startDate: DateTime.tryParse(json['start_date'] ?? '') ?? DateTime.now(),
       endDate: DateTime.tryParse(json['end_date'] ?? '') ?? DateTime.now(),
       quota: json['quota'] ?? 0,
+      usedQuota: json['used_quota'] ?? 0,
       isActive: json['is_active'] ?? false,
       buyQty: json['buy_qty'],
       freeQty: json['free_qty'],
@@ -63,6 +66,7 @@ class PromoModel {
       'start_date': startDate.toIso8601String(),
       'end_date': endDate.toIso8601String(),
       'quota': quota,
+      'used_quota': usedQuota,
       'is_active': isActive,
       if (type == 'bogo') 'buy_qty': buyQty,
       if (type == 'bogo') 'free_qty': freeQty,

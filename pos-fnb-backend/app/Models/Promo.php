@@ -24,6 +24,7 @@ class Promo extends Model
         'quota',
         'used_quota',
         'is_active',
+        'menu_id',
     ];
 
     protected $casts = [
@@ -40,5 +41,10 @@ class Promo extends Model
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class);
     }
 }

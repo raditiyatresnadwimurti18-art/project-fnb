@@ -22,12 +22,16 @@ class TransactionController extends Controller
     {
         $data = $request->validated();
         
-        $preview = $this->transactionService->calculatePreview(
-            $data['items'],
-            $data['promo_id'] ?? null
-        );
+        try {
+            $preview = $this->transactionService->calculatePreview(
+                $data['items'],
+                $data['promo_id'] ?? null
+            );
 
-        return response()->json(['data' => $preview]);
+            return response()->json(['data' => $preview]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 
     public function store(StoreTransactionRequest $request): JsonResponse
@@ -35,11 +39,15 @@ class TransactionController extends Controller
         $data = $request->validated();
 
         try {
+            $userId = auth()->id() ?? $data['user_id'] ?? null;
+            $paymentMethod = $data['payment_method'] ?? 'Cash';
+
             $transaction = $this->transactionService->checkout(
                 $data['items'],
                 $data['payment_amount'],
                 $data['promo_id'] ?? null,
-                $data['user_id'] ?? null
+                $userId,
+                $paymentMethod
             );
 
             return response()->json([

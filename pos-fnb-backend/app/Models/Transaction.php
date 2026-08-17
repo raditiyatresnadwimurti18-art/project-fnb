@@ -18,6 +18,7 @@ class Transaction extends Model
         'change_amount',
         'promo_id',
         'user_id',
+        'payment_method',
     ];
 
     protected $casts = [

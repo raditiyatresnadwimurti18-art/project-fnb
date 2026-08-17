@@ -9,6 +9,7 @@ use App\Http\Requests\StoreMenuRequest;
 use App\Http\Requests\UpdateMenuRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class MenuController extends Controller
@@ -25,6 +26,29 @@ class MenuController extends Controller
             $menuData = $request->validated();
             $price = $menuData['price'];
             unset($menuData['price']);
+
+            // Auto-generate kode_menu
+            $kategori = strtolower($menuData['kategori']);
+            $prefix = 'ot';
+            if ($kategori === 'makanan' || $kategori === 'mk') $prefix = 'mk';
+            elseif ($kategori === 'minuman' || $kategori === 'mn') $prefix = 'mn';
+            elseif ($kategori === 'desert' || $kategori === 'dessert' || $kategori === 'ds') $prefix = 'ds';
+            elseif ($kategori === 'coffee' || $kategori === 'kopi' || $kategori === 'cf') $prefix = 'cf';
+
+            $lastMenu = Menu::where('kode_menu', 'like', $prefix . '%')
+                ->orderByRaw('LENGTH(kode_menu) DESC')
+                ->orderBy('kode_menu', 'desc')
+                ->first();
+
+            $nextIndex = 1;
+            if ($lastMenu) {
+                $lastCode = $lastMenu->kode_menu;
+                $lastIndex = (int) str_replace($prefix, '', $lastCode);
+                $nextIndex = $lastIndex + 1;
+            }
+            $menuData['kode_menu'] = $prefix . $nextIndex;
+
+            // Hapus blok file upload karena gambar sekarang hanya URL teks biasa
 
             $menu = Menu::create($menuData);
 
@@ -52,7 +76,11 @@ class MenuController extends Controller
     public function update(UpdateMenuRequest $request, $id): JsonResponse
     {
         $menu = Menu::findOrFail($id);
-        $menu->update($request->validated());
+        $menuData = $request->validated();
+
+        // Hapus blok file upload dan delete old image karena sekarang hanya URL teks biasa
+
+        $menu->update($menuData);
 
         return response()->json([
             'message' => 'Menu updated successfully',

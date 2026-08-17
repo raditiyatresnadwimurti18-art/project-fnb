@@ -351,8 +351,6 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
               "min_purchase": "50000.00",
               "start_date": "2026-08-15 00:00:00",
               "end_date": "2026-08-20 23:59:59",
-              "quota": 50,
-              "used_quota": 0,
               "menu_id": 1 
           }
       ]
@@ -378,12 +376,10 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
       "min_purchase": 50000,
       "start_date": "2026-08-15 00:00:00",
       "end_date": "2026-08-20 23:59:59",
-      "quota": 50,
       "menu_id": 1 
   }
   ```
   *(Catatan: Field `menu_id` opsional. Jika diisi ID menu, maka promo diskon/BOGO HANYA akan berlaku untuk item menu tersebut saat dikalkulasi di kasir).*
-  *(Catatan Kuota: Field `quota` mewakili sisa kuota promo. Setiap kali transaksi checkout berhasil menggunakan promo ini, nilai `quota` akan otomatis berkurang di database).*
 - **Response (Sukses 201 Created):**
   *(Data promo yang baru dibuat akan dikembalikan)*
 
@@ -442,13 +438,6 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
           }
       ],
       "promo_id": 1
-  }
-  ```
-- **Response (Gagal - Syarat Promo Tidak Terpenuhi 400 Bad Request):**
-  *(Ini bisa terjadi saat fitur Kalkulasi maupun Checkout)*
-  ```json
-  {
-      "message": "Anda belum memenuhi syarat promo. Tambah pesanan Rp 5.000 lagi untuk menggunakan promo ini."
   }
   ```
 
@@ -514,7 +503,7 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
 - **URL:** `/reports/sales?start_date=2026-08-01&end_date=2026-08-31`
 - **Method:** `GET`
 - **Header:** `Authorization: Bearer <token_admin>` *(Wajib disertakan untuk menghindari error 401 Unauthorized)*
-- **Deskripsi:** Menghasilkan rangkuman jumlah transaksi, pendapatan kotor (Gross Revenue), total diskon promo, pendapatan bersih (Net Revenue), Total Modal (COGS), dan Laba Kotor (Gross Profit). Selain itu, laporan ini menampilkan statistik menu terlaris (*Menu Analytics*), penggunaan promo (*Promo Analytics*), dan performa masing-masing kasir.
+- **Deskripsi:** Menghasilkan rangkuman jumlah transaksi, pendapatan kotor (Revenue), Total Modal (COGS), dan Laba Kotor (Gross Profit), serta rekap pendapatan yang dihasilkan oleh masing-masing kasir.
   - **Parameter Opsional:** Anda bisa secara dinamis menambahkan `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` di ujung URL untuk memilih rentang waktu tertentu (misal: satu bulan, satu tahun, atau satu minggu).
   - **Default:** Jika Anda tidak mengirimkan parameter tanggal sama sekali (hanya memanggil `/reports/sales`), maka *Backend* secara otomatis akan merangkum **data penjualan khusus untuk HARI INI saja**.
 - **Response (Sukses):**
@@ -527,29 +516,10 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
           },
           "summary": {
               "total_transactions": 150,
-              "gross_revenue": 7600000,
-              "total_discount": 100000,
-              "net_revenue": 7500000,
+              "total_revenue": 7500000,
               "total_cogs": 4000000,
               "gross_profit": 3500000
           },
-          "sales_by_menu": [
-              {
-                  "menu_id": 1,
-                  "menu_name": "Nasi Goreng Spesial",
-                  "qty_sold": 50,
-                  "gross_revenue": 1250000,
-                  "cogs": 750000
-              }
-          ],
-          "promo_analytics": [
-              {
-                  "promo_id": 2,
-                  "promo_name": "Diskon Akhir Pekan",
-                  "times_used": 10,
-                  "total_discount_given": 100000
-              }
-          ],
           "sales_by_kasir": [
               {
                   "user_id": 2,

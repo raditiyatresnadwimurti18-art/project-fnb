@@ -7,6 +7,8 @@ import 'providers/pos_provider.dart';
 import 'providers/admin_menu_provider.dart';
 import 'providers/admin_promo_provider.dart';
 import 'providers/admin_price_provider.dart';
+import 'providers/admin_kasir_provider.dart';
+import 'providers/report_provider.dart';
 import 'core/app_router.dart';
 
 void main() {
@@ -18,6 +20,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => AdminMenuProvider()),
         ChangeNotifierProvider(create: (_) => AdminPromoProvider()),
         ChangeNotifierProvider(create: (_) => AdminPriceProvider()),
+        ChangeNotifierProvider(create: (_) => AdminKasirProvider()),
+        ChangeNotifierProvider(create: (_) => ReportProvider()),
       ],
       child: const MyApp(),
     ),

@@ -249,7 +249,7 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                                 
                                 return ListTile(
                                   title: Text(promo.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('${promo.type.toUpperCase()} - $benefit'),
+                                  subtitle: Text('${promo.type.toUpperCase()} - $benefit\nKuota Terpakai: ${promo.usedQuota} / ${promo.quota == 0 ? 'Unlimited' : promo.quota}'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [

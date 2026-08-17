@@ -25,6 +25,8 @@ class PosProvider with ChangeNotifier {
   double finalTotal = 0;
 
   String? lastInvoiceNumber;
+  double lastChangeAmount = 0;
+  String? errorMessage;
 
   Future<void> loadData() async {
     isLoading = true;
@@ -75,11 +77,13 @@ class PosProvider with ChangeNotifier {
       subtotal = 0;
       discountTotal = 0;
       finalTotal = 0;
+      errorMessage = null;
       notifyListeners();
       return;
     }
 
     isCalculating = true;
+    errorMessage = null;
     notifyListeners();
 
     try {
@@ -96,7 +100,19 @@ class PosProvider with ChangeNotifier {
       discountTotal = double.tryParse(result['discount_amount']?.toString() ?? '0') ?? 0;
       finalTotal = double.tryParse(result['total_amount']?.toString() ?? '0') ?? 0;
     } catch (e) {
-      debugPrint('Error calculate cart: $e');
+      errorMessage = e.toString().replaceAll('Exception: ', '');
+      
+      // Hitung subtotal manual agar UI tetap terupdate meski API menolak promo
+      double tempSubtotal = 0;
+      for (var entry in cart.entries) {
+        try {
+          final menu = menus.firstWhere((m) => m.id == entry.key);
+          tempSubtotal += menu.price * entry.value;
+        } catch (_) {}
+      }
+      subtotal = tempSubtotal;
+      discountTotal = 0;
+      finalTotal = tempSubtotal;
     }
 
     isCalculating = false;
@@ -119,6 +135,15 @@ class PosProvider with ChangeNotifier {
       final result = await _transactionRepository.checkout(transaction);
       lastInvoiceNumber = result['invoice_number'];
       
+      try {
+        final invoiceData = await _transactionRepository.getInvoice(lastInvoiceNumber!);
+        final double totalAmount = double.tryParse(invoiceData['total_amount']?.toString() ?? '0') ?? 0;
+        lastChangeAmount = paymentAmount - totalAmount;
+      } catch (e) {
+        // Fallback jika gagal fetch invoice
+        lastChangeAmount = paymentAmount - finalTotal;
+      }
+      
       cart.clear();
       selectedPromo = null;
       subtotal = 0;
@@ -129,8 +154,8 @@ class PosProvider with ChangeNotifier {
       return true;
     } catch (e) {
       isLoading = false;
+      errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
-      debugPrint('Error checkout: $e');
       return false;
     }
   }

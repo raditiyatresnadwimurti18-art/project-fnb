@@ -19,6 +19,7 @@ class StoreTransactionRequest extends FormRequest
             'items.*.qty' => 'required|integer|min:1',
             'promo_id' => 'nullable|exists:promos,id',
             'payment_amount' => 'required|numeric|min:0',
+            'payment_method' => 'nullable|string',
             'user_id' => 'nullable|exists:users,id',
         ];
     }

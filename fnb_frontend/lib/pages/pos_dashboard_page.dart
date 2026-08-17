@@ -14,7 +14,11 @@ class PosDashboardPage extends StatefulWidget {
 }
 
 class _PosDashboardPageState extends State<PosDashboardPage> {
-  final NumberFormat _currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
 
   @override
   void initState() {
@@ -40,7 +44,13 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Total Tagihan: ${_currencyFormat.format(provider.finalTotal)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  Text(
+                    'Total Tagihan: ${_currencyFormat.format(provider.finalTotal)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: paymentController,
@@ -59,52 +69,88 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                     child: const Text('Batal'),
                   ),
                 ElevatedButton(
-                  onPressed: isProcessing ? null : () async {
-                    final payment = double.tryParse(paymentController.text) ?? 0;
-                    if (payment < provider.finalTotal) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uang pembayaran kurang!')));
-                      return;
-                    }
-                    setStateDialog(() => isProcessing = true);
-                    final success = await provider.checkout(payment);
-                    if (mounted) {
-                      Navigator.pop(context); // Tutup dialog pembayaran
-                      if (success) {
-                        final change = payment - provider.finalTotal;
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Transaksi Berhasil!', style: TextStyle(color: Colors.green)),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Invoice: ${provider.lastInvoiceNumber}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                Text('Kembalian: ${_currencyFormat.format(change)}', style: const TextStyle(fontSize: 18, color: Colors.blue)),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Tutup / Cetak Struk'),
-                              )
-                            ],
-                          )
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal checkout transaksi!')));
-                      }
-                    }
-                  },
-                  child: isProcessing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Bayar'),
-                )
+                  onPressed: isProcessing
+                      ? null
+                      : () async {
+                          final payment =
+                              double.tryParse(paymentController.text) ?? 0;
+                          if (payment < provider.finalTotal) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Uang pembayaran kurang!'),
+                              ),
+                            );
+                            return;
+                          }
+                          setStateDialog(() => isProcessing = true);
+                          final success = await provider.checkout(payment);
+                          if (mounted) {
+                            Navigator.pop(context); // Tutup dialog pembayaran
+                            if (success) {
+                              final change = provider.lastChangeAmount;
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => AlertDialog(
+                                  title: const Text(
+                                    'Transaksi Berhasil!',
+                                    style: TextStyle(color: Colors.green),
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Invoice: ${provider.lastInvoiceNumber}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Kembalian: ${_currencyFormat.format(change)}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Tutup / Cetak Struk'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(provider.errorMessage ?? 'Gagal checkout transaksi!'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isProcessing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Bayar'),
+                ),
               ],
             );
-          }
+          },
         );
-      }
+      },
     );
   }
 
@@ -116,7 +162,10 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
         return Scaffold(
           backgroundColor: Colors.grey.shade50,
           appBar: AppBar(
-            title: const Text('FNB Cashier POS', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text(
+              'FNB Cashier POS',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             backgroundColor: Colors.white,
             actions: [
               Padding(
@@ -124,7 +173,10 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                 child: Center(
                   child: Text(
                     'Kasir: ${Provider.of<AuthProvider>(context, listen: false).role}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black54,
+                    ),
                   ),
                 ),
               ),
@@ -137,33 +189,40 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
               ),
             ],
           ),
-          floatingActionButton: isDesktop ? null : FloatingActionButton.extended(
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) {
-                  return DraggableScrollableSheet(
-                    initialChildSize: 0.8,
-                    maxChildSize: 0.9,
-                    minChildSize: 0.5,
-                    builder: (_, controller) {
-                      return Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                        ),
-                        child: _buildCartSidebar(provider, isMobile: true),
-                      );
-                    },
-                  );
-                },
-              );
-            },
-            icon: const Icon(Icons.shopping_cart),
-            label: Text('${provider.cart.length} Item'),
-          ),
+          floatingActionButton: isDesktop
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) {
+                        return DraggableScrollableSheet(
+                          initialChildSize: 0.8,
+                          maxChildSize: 0.9,
+                          minChildSize: 0.5,
+                          builder: (_, controller) {
+                            return Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20),
+                                ),
+                              ),
+                              child: _buildCartSidebar(
+                                provider,
+                                isMobile: true,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.shopping_cart),
+                  label: Text('${provider.cart.length} Item'),
+                ),
           body: Row(
             children: [
               // Left Side: Menu Grid
@@ -178,17 +237,21 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                           children: [
                             const Text(
                               'Pilih Menu',
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Expanded(
                               child: GridView.builder(
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isDesktop ? 3 : 2,
-                                  childAspectRatio: isDesktop ? 0.85 : 0.75,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                ),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: isDesktop ? 3 : 2,
+                                      childAspectRatio: isDesktop ? 0.85 : 0.75,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                    ),
                                 itemCount: provider.menus.length,
                                 itemBuilder: (context, index) {
                                   final menu = provider.menus[index];
@@ -225,7 +288,9 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-              borderRadius: isMobile ? const BorderRadius.vertical(top: Radius.circular(20)) : null,
+              borderRadius: isMobile
+                  ? const BorderRadius.vertical(top: Radius.circular(20))
+                  : null,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -236,7 +301,10 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                     SizedBox(width: 8),
                     Text(
                       'Pesanan Saat Ini',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -244,14 +312,19 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
-                  )
+                  ),
               ],
             ),
           ),
           const Divider(height: 1),
           Expanded(
             child: provider.cart.isEmpty
-                ? const Center(child: Text('Belum ada pesanan', style: TextStyle(color: Colors.grey)))
+                ? const Center(
+                    child: Text(
+                      'Belum ada pesanan',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: provider.cart.length,
@@ -279,13 +352,19 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
                 child: Image.network(
                   menu.gambar,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: Colors.grey.shade200,
-                    child: const Icon(Icons.fastfood, size: 40, color: Colors.grey),
+                    child: const Icon(
+                      Icons.fastfood,
+                      size: 40,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
               ),
@@ -297,14 +376,20 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                 children: [
                   Text(
                     menu.namaMenu,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _currencyFormat.format(menu.price),
-                    style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -334,15 +419,27 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('${qty}x', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+            child: Text(
+              '${qty}x',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(menu.namaMenu, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(_currencyFormat.format(menu.price), style: const TextStyle(color: Colors.grey)),
+                Text(
+                  menu.namaMenu,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _currencyFormat.format(menu.price),
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -365,7 +462,7 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
             color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -4),
             blurRadius: 10,
-          )
+          ),
         ],
       ),
       child: Column(
@@ -378,29 +475,66 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                 decoration: const InputDecoration(
                   labelText: 'Gunakan Promo',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
                 initialValue: provider.selectedPromo,
+                isExpanded: true,
                 items: [
                   const DropdownMenuItem<PromoModel>(
                     value: null,
-                    child: Text('Tanpa Promo'),
+                    child: Text('Tanpa Promo', overflow: TextOverflow.ellipsis),
                   ),
-                  ...provider.promos.map((p) => DropdownMenuItem(
-                    value: p,
-                    child: Text(p.name),
-                  ))
+                  ...provider.promos.map(
+                    (p) {
+                      String benefit = p.type == 'discount'
+                          ? (p.isPercentage ? '${p.value}%' : _currencyFormat.format(p.value))
+                          : 'Beli ${p.buyQty ?? 1} Gratis ${p.freeQty ?? 1}';
+                      
+                      String minPurchaseStr = p.minPurchase > 0 
+                          ? ' | Min. ${_currencyFormat.format(p.minPurchase)}' 
+                          : '';
+
+                      return DropdownMenuItem(
+                        value: p, 
+                        child: Text(
+                          '${p.name} ($benefit$minPurchaseStr)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }
+                  ),
                 ],
                 onChanged: (val) {
                   provider.selectPromo(val);
                 },
               ),
             ),
+          if (provider.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                provider.errorMessage!,
+                style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Subtotal', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              Text(_currencyFormat.format(provider.subtotal), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'Subtotal',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              Text(
+                _currencyFormat.format(provider.subtotal),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           if (provider.discountTotal > 0) ...[
@@ -408,8 +542,18 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Diskon Promo', style: TextStyle(fontSize: 16, color: Colors.green)),
-                Text('-${_currencyFormat.format(provider.discountTotal)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                const Text(
+                  'Diskon Promo',
+                  style: TextStyle(fontSize: 16, color: Colors.green),
+                ),
+                Text(
+                  '-${_currencyFormat.format(provider.discountTotal)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
               ],
             ),
           ],
@@ -418,13 +562,30 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total Bayar', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-              provider.isCalculating
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(
-                      _currencyFormat.format(provider.finalTotal),
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Theme.of(context).primaryColor),
-                    ),
+              const Text(
+                'Total Bayar',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              Flexible(
+                child: provider.isCalculating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          _currencyFormat.format(provider.finalTotal),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -432,7 +593,13 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: provider.cart.isEmpty || provider.isCalculating || provider.isLoading ? null : () => _handleCheckout(provider),
+              onPressed:
+                  provider.cart.isEmpty ||
+                      provider.isCalculating ||
+                      provider.isLoading ||
+                      provider.errorMessage != null
+                  ? null
+                  : () => _handleCheckout(provider),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
@@ -440,9 +607,15 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
               ),
               child: provider.isLoading && provider.cart.isNotEmpty
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Checkout', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  : const Text(
+                      'Checkout',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
-          )
+          ),
         ],
       ),
     );

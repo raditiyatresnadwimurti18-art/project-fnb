@@ -5,6 +5,8 @@ import '../models/menu_model.dart';
 import '../providers/admin_menu_provider.dart';
 import '../widgets/promo_dashboard_view.dart';
 import '../widgets/price_dashboard_view.dart';
+import '../widgets/kasir_dashboard_view.dart';
+import '../widgets/report_dashboard_view.dart';
 import 'package:intl/intl.dart';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -62,6 +64,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     final kodeController = TextEditingController(text: menu?.kodeMenu ?? '');
     final namaController = TextEditingController(text: menu?.namaMenu ?? '');
     final kategoriController = TextEditingController(text: menu?.kategori ?? 'Makanan');
+    final modalController = TextEditingController(text: menu?.modal?.toString() ?? '');
     final hargaController = TextEditingController(text: menu?.price.toString() ?? '');
     final deskripsiController = TextEditingController(text: menu?.deskripsi ?? '');
     final gambarController = TextEditingController(text: menu?.gambar ?? '');
@@ -92,8 +95,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     decoration: const InputDecoration(labelText: 'Kategori'),
                   ),
                   TextFormField(
+                    controller: modalController,
+                    decoration: const InputDecoration(labelText: 'Modal/HPP *'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                  ),
+                  TextFormField(
                     controller: hargaController,
-                    decoration: const InputDecoration(labelText: 'Harga *'),
+                    decoration: const InputDecoration(labelText: 'Harga Jual *'),
                     keyboardType: TextInputType.number,
                     validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
                   ),
@@ -125,6 +134,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     kodeMenu: kodeController.text,
                     namaMenu: namaController.text,
                     kategori: kategoriController.text,
+                    modal: double.tryParse(modalController.text) ?? 0,
                     price: double.tryParse(hargaController.text) ?? 0,
                     deskripsi: deskripsiController.text,
                     gambar: gambarController.text,
@@ -165,7 +175,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             NavigationRail(
               selectedIndex: _selectedIndex,
               onDestinationSelected: (int index) {
-                if (index == 3) {
+                if (index == 5) {
                   Provider.of<AuthProvider>(context, listen: false).logout();
                 } else {
                   setState(() {
@@ -191,6 +201,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   icon: Icon(Icons.history_outlined),
                   selectedIcon: Icon(Icons.history),
                   label: Text('Harga'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.people_outline),
+                  selectedIcon: Icon(Icons.people),
+                  label: Text('Kasir'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.analytics_outlined),
+                  selectedIcon: Icon(Icons.analytics),
+                  label: Text('Laporan'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.logout, color: Colors.red),
@@ -242,6 +262,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             selectedIcon: Icon(Icons.history),
             label: 'Harga',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Kasir',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Laporan',
+          ),
         ],
       ),
     );
@@ -254,6 +284,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       return const PromoDashboardView();
     } else if (_selectedIndex == 2) {
       return const PriceDashboardView();
+    } else if (_selectedIndex == 3) {
+      return const KasirDashboardView();
+    } else if (_selectedIndex == 4) {
+      return const ReportDashboardView();
     } else {
       return Center(
         child: Text(

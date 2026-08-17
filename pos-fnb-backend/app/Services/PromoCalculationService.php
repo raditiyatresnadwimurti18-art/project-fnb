@@ -31,16 +31,37 @@ class PromoCalculationService
                 'qty' => $item['qty'],
                 'price' => $price,
                 'subtotal' => $itemSubtotal,
+                'modal' => $menu->modal,
             ];
         }
 
         $discountAmount = 0;
 
-        if ($promo && $this->isPromoValid($promo, $subtotal)) {
-            if ($promo->type === 'discount') {
-                $discountAmount = $this->calculateDiscount($promo, $subtotal);
-            } elseif ($promo->type === 'bogo') {
-                $discountAmount = $this->calculateBogo($promo, $itemsData);
+        if ($promo) {
+            $this->isPromoValid($promo, $subtotal);
+
+            $eligibleItems = $itemsData;
+            
+            if ($promo->menu_id) {
+                $eligibleItems = array_filter($itemsData, function ($item) use ($promo) {
+                    return $item['menu_id'] == $promo->menu_id;
+                });
+                
+                if (empty($eligibleItems)) {
+                    throw new \Exception('Promo ini hanya berlaku untuk menu tertentu yang tidak ada di keranjang Anda.');
+                }
+            }
+
+            if (!empty($eligibleItems)) {
+                if ($promo->type === 'discount') {
+                    $eligibleSubtotal = array_sum(array_column($eligibleItems, 'subtotal'));
+                    $discountAmount = $this->calculateDiscount($promo, $eligibleSubtotal);
+                } elseif ($promo->type === 'bogo') {
+                    $discountAmount = $this->calculateBogo($promo, $eligibleItems);
+                    if ($discountAmount == 0) {
+                        throw new \Exception('Jumlah pesanan Anda belum memenuhi syarat Beli X Gratis Y promo ini.');
+                    }
+                }
             }
         }
 
@@ -57,14 +78,23 @@ class PromoCalculationService
 
     private function isPromoValid(Promo $promo, $subtotal)
     {
-        if (!$promo->is_active) return false;
+        if (!$promo->is_active) {
+            throw new \Exception('Promo ini sudah tidak aktif.');
+        }
         
         $now = Carbon::now();
-        if ($now->lt($promo->start_date) || $now->gt($promo->end_date)) return false;
+        if ($now->lt($promo->start_date) || $now->gt($promo->end_date)) {
+            throw new \Exception('Waktu promo belum dimulai atau sudah kedaluwarsa.');
+        }
         
-        if ($promo->quota !== null && $promo->used_quota >= $promo->quota) return false;
+        if ($promo->quota !== null && $promo->quota <= 0) {
+            throw new \Exception('Kuota promo ini sudah habis.');
+        }
         
-        if ($promo->min_purchase !== null && $subtotal < (float) $promo->min_purchase) return false;
+        if ($promo->min_purchase !== null && $subtotal < (float) $promo->min_purchase) {
+            $kurang = number_format((float)$promo->min_purchase - $subtotal, 0, ',', '.');
+            throw new \Exception('Anda belum memenuhi syarat promo. Tambah pesanan Rp ' . $kurang . ' lagi untuk menggunakan promo ini.');
+        }
 
         return true;
     }

@@ -23,9 +23,9 @@ class TransactionService
         return $this->promoCalculationService->calculate($items, $promo);
     }
 
-    public function checkout(array $items, $paymentAmount, $promoId = null, $userId = null)
+    public function checkout(array $items, $paymentAmount, $promoId = null, $userId = null, $paymentMethod = 'Cash')
     {
-        return DB::transaction(function () use ($items, $paymentAmount, $promoId, $userId) {
+        return DB::transaction(function () use ($items, $paymentAmount, $promoId, $userId, $paymentMethod) {
             $promo = $promoId ? Promo::find($promoId) : null;
             $calculation = $this->promoCalculationService->calculate($items, $promo);
 
@@ -47,6 +47,7 @@ class TransactionService
                 'change_amount' => $changeAmount,
                 'promo_id' => $calculation['promo_id'],
                 'user_id' => $userId,
+                'payment_method' => $paymentMethod,
             ]);
 
             foreach ($calculation['items'] as $itemData) {
@@ -56,9 +57,13 @@ class TransactionService
                     'qty' => $itemData['qty'],
                     'price' => $itemData['price'],
                     'subtotal' => $itemData['subtotal'],
+                    'modal_saat_ini' => $itemData['modal'], // Ensure we are passing modal from calculation
                 ]);
             }
 
+            if ($promo && $promo->quota !== null) {
+                $promo->decrement('quota');
+            }
             if ($promo) {
                 $promo->increment('used_quota');
             }

@@ -17,6 +17,7 @@ class Menu extends Model
         'deskripsi',
         'gambar',
         'is_active',
+        'modal',
     ];
 
     protected $casts = [
