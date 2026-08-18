@@ -16,24 +16,32 @@ class Menu extends Model
         'kategori',
         'deskripsi',
         'gambar',
-        'is_active',
-        'modal',
+        'price',
+        'modal', // Removed is_active from fillable
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'price' => 'decimal:2',
+        'modal' => 'decimal:2',
     ];
 
-    public function priceHistories()
+    protected $appends = [
+        'total_stock',
+        'is_active', // computed property
+    ];
+
+    public function inventoryBatches()
     {
-        return $this->hasMany(PriceHistory::class);
+        return $this->hasMany(InventoryBatch::class);
     }
 
-    /**
-     * Get the current active price (the latest price history).
-     */
-    public function currentPrice()
+    public function getTotalStockAttribute()
     {
-        return $this->hasOne(PriceHistory::class)->latestOfMany('effective_date');
+        return $this->inventoryBatches()->sum('qty_remaining') ?? 0;
+    }
+
+    public function getIsActiveAttribute()
+    {
+        return $this->total_stock > 0;
     }
 }

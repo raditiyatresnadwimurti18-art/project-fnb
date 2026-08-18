@@ -59,4 +59,34 @@ class AdminMenuProvider with ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> addStock(int menuId, int qty, double modal) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      await _menuRepository.addStock(menuId, qty, modal);
+      await loadMenus();
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> adjustStock(int menuId, int qty) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      await _menuRepository.adjustStock(menuId, qty);
+      await loadMenus();
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

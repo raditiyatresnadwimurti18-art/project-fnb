@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/promo_model.dart';
 import '../providers/admin_promo_provider.dart';
 import 'package:intl/intl.dart';
+import '../core/theme/app_theme.dart';
 
 class PromoDashboardView extends StatefulWidget {
   const PromoDashboardView({super.key});
@@ -39,15 +40,15 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
       ),
     );
 
-    if (confirm == true && mounted) {
+    if (confirm == true) {
+      if (!mounted) return;
       final success = await Provider.of<AdminPromoProvider>(context, listen: false).deletePromo(promo.id!);
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Promo berhasil dihapus')));
-        } else {
-          final err = Provider.of<AdminPromoProvider>(context, listen: false).errorMessage;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Gagal menghapus promo')));
-        }
+      if (!mounted) return;
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Promo berhasil dihapus')));
+      } else {
+        final err = Provider.of<AdminPromoProvider>(context, listen: false).errorMessage;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Gagal menghapus promo')));
       }
     }
   }
@@ -63,6 +64,7 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
     final maxDiscountController = TextEditingController(text: promo?.maxDiscount.toString() ?? '0');
     final minPurchaseController = TextEditingController(text: promo?.minPurchase.toString() ?? '0');
     final quotaController = TextEditingController(text: promo?.quota.toString() ?? '0');
+    final usedQuotaController = TextEditingController(text: promo?.usedQuota.toString() ?? '0');
     final buyQtyController = TextEditingController(text: promo?.buyQty?.toString() ?? '1');
     final freeQtyController = TextEditingController(text: promo?.freeQty?.toString() ?? '1');
     bool applyMultiple = promo?.applyMultiple ?? false;
@@ -89,7 +91,7 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: type,
+                    initialValue: type,
                     decoration: const InputDecoration(labelText: 'Tipe Promo', border: OutlineInputBorder()),
                     items: const [
                       DropdownMenuItem(value: 'discount', child: Text('Diskon / Potongan Harga')),
@@ -145,7 +147,21 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: quotaController,
-                    decoration: const InputDecoration(labelText: 'Kuota Promo (0 = Unlimited)', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: 'Limit Voucher Promo (0 = Unlimited)', border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      final limit = int.tryParse(v ?? '0') ?? 0;
+                      final used = int.tryParse(usedQuotaController.text) ?? 0;
+                      if (limit > 0 && limit < used) {
+                        return 'Limit tidak boleh kurang dari kuota terpakai';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: usedQuotaController,
+                    decoration: const InputDecoration(labelText: 'Kuota Terpakai', border: OutlineInputBorder()),
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
@@ -174,6 +190,7 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                     startDate: startDate,
                     endDate: endDate,
                     quota: int.tryParse(quotaController.text) ?? 0,
+                    usedQuota: int.tryParse(usedQuotaController.text) ?? 0,
                     isActive: isActive,
                     buyQty: type == 'bogo' ? int.tryParse(buyQtyController.text) ?? 1 : null,
                     freeQty: type == 'bogo' ? int.tryParse(freeQtyController.text) ?? 1 : null,
@@ -189,14 +206,14 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
       ),
     ).then((result) async {
       if (result != null && result is PromoModel) {
+        if (!mounted) return;
         final success = await Provider.of<AdminPromoProvider>(context, listen: false).savePromo(result, isEdit);
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berhasil menyimpan promo')));
-          } else {
-            final err = Provider.of<AdminPromoProvider>(context, listen: false).errorMessage;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Gagal menyimpan promo')));
-          }
+        if (!mounted) return;
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berhasil menyimpan promo')));
+        } else {
+          final err = Provider.of<AdminPromoProvider>(context, listen: false).errorMessage;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Gagal menyimpan promo')));
         }
       }
     });
@@ -238,38 +255,90 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                       ? const Center(child: CircularProgressIndicator())
                       : provider.promos.isEmpty
                           ? const Center(child: Text('Tidak ada promo aktif.'))
-                          : ListView.builder(
+                          : ListView.separated(
                               padding: const EdgeInsets.all(16),
                               itemCount: provider.promos.length,
+                              separatorBuilder: (context, index) => const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final promo = provider.promos[index];
                                 String benefit = promo.type == 'discount'
                                     ? (promo.isPercentage ? '${promo.value}%' : _currencyFormat.format(promo.value))
                                     : 'Beli ${promo.buyQty} Gratis ${promo.freeQty}';
                                 
-                                return ListTile(
-                                  title: Text(promo.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('${promo.type.toUpperCase()} - $benefit\nKuota Terpakai: ${promo.usedQuota} / ${promo.quota == 0 ? 'Unlimited' : promo.quota}'),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                    border: Border.all(color: AppTheme.border),
+                                  ),
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
                                     children: [
-                                      Chip(
-                                        label: Text(promo.isActive ? 'Aktif' : 'Tidak Aktif'),
-                                        backgroundColor: promo.isActive ? Colors.green.shade100 : Colors.red.shade100,
-                                        labelStyle: TextStyle(
-                                          color: promo.isActive ? Colors.green.shade800 : Colors.red.shade800,
-                                          fontSize: 12,
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryLight,
+                                          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                                         ),
-                                        side: BorderSide.none,
+                                        child: const Icon(Icons.discount_outlined, color: AppTheme.primaryColor),
                                       ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _showPromoFormDialog(promo),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    promo.name,
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: promo.isActive ? AppTheme.successLight : AppTheme.errorLight,
+                                                    borderRadius: BorderRadius.circular(16),
+                                                  ),
+                                                  child: Text(
+                                                    promo.isActive ? 'Aktif' : 'Tidak Aktif',
+                                                    style: TextStyle(
+                                                      color: promo.isActive ? AppTheme.success : AppTheme.error,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              '${promo.type.toUpperCase()} • $benefit',
+                                              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Terpakai: ${promo.usedQuota} / Limit Voucher Promo: ${promo.quota == 0 ? 'Unlimited' : promo.quota}',
+                                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () => _deletePromo(promo),
+                                      const SizedBox(width: 16),
+                                      Column(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryColor),
+                                            onPressed: () => _showPromoFormDialog(promo),
+                                            tooltip: 'Edit',
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                                            onPressed: () => _deletePromo(promo),
+                                            tooltip: 'Hapus',
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

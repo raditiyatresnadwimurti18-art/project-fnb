@@ -11,18 +11,22 @@ Dokumen ini merupakan kerangka dasar (blueprint) arsitektur Fase 1 untuk RESTful
 - `kategori` (String) - *Kategori (contoh: Makanan, Minuman, Snack)*
 - `deskripsi` (Text, Nullable)
 - `gambar` (String, Nullable) - *Menyimpan link/URL gambar dari internet*
-- `is_active` (Boolean, Default: true) - *Status ketersediaan menu*
+- `price` (Decimal) - *Harga jual menu saat ini*
+- `modal` (Decimal) - *Modal/HPP per satuan*
+- `is_active` (Computed) - *Otomatis true jika total_stock > 0*
 - `deleted_at` (Timestamp, Nullable) - *Untuk fitur SoftDeletes*
 - `created_at`, `updated_at` (Timestamps)
 
-### `price_histories` (Riwayat Harga)
+### `inventory_batches` (Inventory / Stok FIFO)
 - `id` (PK, BigInt, Unsigned)
 - `menu_id` (FK -> `menus.id`)
-- `old_price` (Decimal/Integer) - *Harga lama*
-- `new_price` (Decimal/Integer) - *Harga baru yang berlaku*
-- `effective_date` (DateTime) - *Tanggal mulai berlakunya harga baru*
-- `user_id` (FK -> `users.id`, Nullable) - *Admin/User yang mengubah harga*
+- `qty_purchased` (Integer) - *Jumlah yang dibeli*
+- `qty_remaining` (Integer) - *Sisa stok di batch ini*
+- `modal` (Decimal) - *Modal per satuan*
+- `purchased_at` (DateTime) - *Tanggal pembelian*
 - `created_at`, `updated_at` (Timestamps)
+
+> **Catatan:** Harga jual menu disimpan langsung di kolom `price` pada tabel `menus`. Sistem `price_histories` sudah tidak digunakan.
 
 ### `promos` (Manajemen Promo)
 - `id` (PK, BigInt, Unsigned)
@@ -75,7 +79,7 @@ app/
 │   ├── Controllers/
 │   │   └── Api/
 │   │       ├── MenuController.php
-│   │       ├── PriceHistoryController.php
+│   │       ├── KasirController.php
 │   │       ├── PromoController.php
 │   │       └── TransactionController.php
 │   └── Requests/ (Validasi Input Form)
@@ -92,7 +96,7 @@ app/
 │           └── StoreTransactionRequest.php
 ├── Models/
 │   ├── Menu.php
-│   ├── PriceHistory.php
+│   ├── InventoryBatch.php
 │   ├── Promo.php
 │   ├── Transaction.php
 │   └── TransactionItem.php

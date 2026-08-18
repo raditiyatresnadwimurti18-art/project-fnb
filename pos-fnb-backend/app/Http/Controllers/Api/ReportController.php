@@ -34,7 +34,7 @@ class ReportController extends Controller
         $salesByMenuRaw = [];
 
         foreach ($items as $item) {
-            $itemCogs = $item->qty * $item->modal_saat_ini;
+            $itemCogs = $item->modal_saat_ini; // Already calculated as total COGS via FIFO
             $totalCogs += $itemCogs;
             
             // Menu Analytics logic

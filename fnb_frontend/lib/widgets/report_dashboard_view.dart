@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/report_provider.dart';
+import '../core/theme/app_theme.dart';
 
 class ReportDashboardView extends StatefulWidget {
   const ReportDashboardView({super.key});
@@ -79,13 +80,13 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: Theme.of(context).primaryColor),
-                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryColor),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.calendar_today, color: Theme.of(context).primaryColor, size: 18),
+                          const Icon(Icons.calendar_today, color: AppTheme.primaryColor, size: 18),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
@@ -94,8 +95,8 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                                   : (provider.startDate!.year == 2020
                                       ? 'Semua Waktu'
                                       : '${DateFormat('dd MMM yy').format(provider.startDate!)} - ${DateFormat('dd MMM yy').format(provider.endDate!)}'),
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
+                              style: const TextStyle(
+                                color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),
@@ -103,7 +104,7 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down, color: Theme.of(context).primaryColor),
+                          const Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor),
                         ],
                       ),
                     ),
@@ -147,21 +148,21 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                               title: 'Total Transaksi',
                               value: provider.reportData!.summary.totalTransactions.toString(),
                               icon: Icons.receipt_long,
-                              color: Colors.blue,
+                              color: AppTheme.primaryColor,
                             ),
                             _buildSummaryCard(
                               context,
                               title: 'Pendapatan Kotor',
                               value: _currencyFormat.format(provider.reportData!.summary.grossRevenue),
                               icon: Icons.monetization_on,
-                              color: Colors.green,
+                              color: AppTheme.success,
                             ),
                             _buildSummaryCard(
                               context,
                               title: 'Total Diskon',
                               value: _currencyFormat.format(provider.reportData!.summary.totalDiscount),
                               icon: Icons.local_offer,
-                              color: Colors.orange,
+                              color: AppTheme.warning,
                             ),
                             _buildSummaryCard(
                               context,
@@ -175,7 +176,7 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                               title: 'Total Modal',
                               value: _currencyFormat.format(provider.reportData!.summary.totalCogs),
                               icon: Icons.inventory_2,
-                              color: Colors.purple,
+                              color: AppTheme.error,
                             ),
                             _buildSummaryCard(
                               context,
@@ -192,7 +193,12 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-                        Card(
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            border: Border.all(color: AppTheme.border),
+                          ),
                           child: provider.reportData!.salesByMenu.isEmpty
                               ? const Padding(
                                   padding: EdgeInsets.all(24.0),
@@ -218,7 +224,7 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                                       subtitle: Text('Terjual: ${menuData.qtySold} porsi'),
                                       trailing: Text(
                                         _currencyFormat.format(menuData.grossRevenue),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.success),
                                       ),
                                     );
                                   },
@@ -230,7 +236,12 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-                        Card(
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            border: Border.all(color: AppTheme.border),
+                          ),
                           child: provider.reportData!.promoAnalytics.isEmpty
                               ? const Padding(
                                   padding: EdgeInsets.all(24.0),
@@ -257,7 +268,7 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                                       subtitle: Text('Digunakan: ${promoData.timesUsed} kali'),
                                       trailing: Text(
                                         '-${_currencyFormat.format(promoData.totalDiscountGiven)}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.error),
                                       ),
                                     );
                                   },
@@ -269,7 +280,12 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-                        Card(
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            border: Border.all(color: AppTheme.border),
+                          ),
                           child: provider.reportData!.salesByKasir.isEmpty
                               ? const Padding(
                                   padding: EdgeInsets.all(24.0),
@@ -299,7 +315,7 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                                       subtitle: Text('${kasirData.totalTransactions} Transaksi'),
                                       trailing: Text(
                                         _currencyFormat.format(kasirData.totalRevenue),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.success),
                                       ),
                                     );
                                   },
@@ -322,10 +338,11 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: AppTheme.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

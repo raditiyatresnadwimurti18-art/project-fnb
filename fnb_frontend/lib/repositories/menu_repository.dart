@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/menu_model.dart';
-import '../models/price_history_model.dart';
 import '../../../../core/api_config.dart';
 import '../core/token_service.dart';
 
@@ -193,36 +192,39 @@ class MenuRepository {
     }
   }
 
-  Future<List<PriceHistoryModel>> getPrices(int menuId) async {
+  Future<void> addStock(int menuId, int qty, double modal) async {
     try {
       final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('${ApiConfig.menus}/$menuId/prices'), headers: headers);
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        List<dynamic> data = decoded is Map && decoded.containsKey('data') ? decoded['data'] : decoded;
-        return data.map((j) => PriceHistoryModel.fromJson(j)).toList();
-      } else {
-        throw Exception('Gagal mengambil riwayat harga');
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/inventory/add-stock'),
+        headers: headers,
+        body: json.encode({
+          'menu_id': menuId,
+          'qty': qty,
+          'modal': modal,
+        }),
+      );
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Gagal menambah stok: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error: $e');
     }
   }
 
-  Future<PriceHistoryModel> addPrice(int menuId, PriceHistoryModel price) async {
+  Future<void> adjustStock(int menuId, int qty) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
-        Uri.parse('${ApiConfig.menus}/$menuId/prices'),
+        Uri.parse('${ApiConfig.baseUrl}/inventory/adjust-stock'),
         headers: headers,
-        body: json.encode(price.toJson()),
+        body: json.encode({
+          'menu_id': menuId,
+          'qty': qty,
+        }),
       );
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        final data = decoded is Map && decoded.containsKey('data') ? decoded['data'] : decoded;
-        return PriceHistoryModel.fromJson(data);
-      } else {
-        throw Exception('Gagal menambah harga: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        throw Exception('Gagal mengurangi stok: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Error: $e');

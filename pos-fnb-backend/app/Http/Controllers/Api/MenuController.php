@@ -4,19 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Menu;
-use App\Models\PriceHistory;
 use App\Http\Requests\StoreMenuRequest;
 use App\Http\Requests\UpdateMenuRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class MenuController extends Controller
 {
     public function index(): JsonResponse
     {
-        $menus = Menu::with('currentPrice')->get();
+        $menus = Menu::all();
         return response()->json(['data' => $menus]);
     }
 
@@ -24,20 +22,20 @@ class MenuController extends Controller
     {
         return DB::transaction(function () use ($request) {
             $menuData = $request->validated();
-            $price = $menuData['price'];
-            unset($menuData['price']);
+            unset($menuData['is_active']); // Ignored if sent
 
             // Auto-generate kode_menu
             $kategori = strtolower($menuData['kategori']);
-            $prefix = 'ot';
-            if ($kategori === 'makanan' || $kategori === 'mk') $prefix = 'mk';
-            elseif ($kategori === 'minuman' || $kategori === 'mn') $prefix = 'mn';
-            elseif ($kategori === 'desert' || $kategori === 'dessert' || $kategori === 'ds') $prefix = 'ds';
-            elseif ($kategori === 'coffee' || $kategori === 'kopi' || $kategori === 'cf') $prefix = 'cf';
+            $prefix = 'OTH-';
+            if ($kategori === 'makanan' || $kategori === 'mk') $prefix = 'MKN-';
+            elseif ($kategori === 'minuman' || $kategori === 'mn') $prefix = 'MNM-';
+            elseif ($kategori === 'desert' || $kategori === 'dessert' || $kategori === 'ds') $prefix = 'DSS-';
+            elseif ($kategori === 'coffee' || $kategori === 'kopi' || $kategori === 'cf') $prefix = 'COF-';
 
             $lastMenu = Menu::where('kode_menu', 'like', $prefix . '%')
                 ->orderByRaw('LENGTH(kode_menu) DESC')
                 ->orderBy('kode_menu', 'desc')
+                ->lockForUpdate()
                 ->first();
 
             $nextIndex = 1;
@@ -46,30 +44,20 @@ class MenuController extends Controller
                 $lastIndex = (int) str_replace($prefix, '', $lastCode);
                 $nextIndex = $lastIndex + 1;
             }
-            $menuData['kode_menu'] = $prefix . $nextIndex;
-
-            // Hapus blok file upload karena gambar sekarang hanya URL teks biasa
+            $menuData['kode_menu'] = $prefix . str_pad($nextIndex, 3, '0', STR_PAD_LEFT);
 
             $menu = Menu::create($menuData);
 
-            PriceHistory::create([
-                'menu_id' => $menu->id,
-                'old_price' => $price,
-                'new_price' => $price,
-                'effective_date' => Carbon::now(),
-                // 'user_id' => auth()->id(), // Uncomment if using auth
-            ]);
-
             return response()->json([
                 'message' => 'Menu created successfully',
-                'data' => $menu->load('currentPrice')
+                'data' => $menu
             ], 201);
         });
     }
 
     public function show($id): JsonResponse
     {
-        $menu = Menu::with('currentPrice', 'priceHistories')->findOrFail($id);
+        $menu = Menu::findOrFail($id);
         return response()->json(['data' => $menu]);
     }
 
@@ -77,14 +65,13 @@ class MenuController extends Controller
     {
         $menu = Menu::findOrFail($id);
         $menuData = $request->validated();
-
-        // Hapus blok file upload dan delete old image karena sekarang hanya URL teks biasa
+        unset($menuData['is_active']);
 
         $menu->update($menuData);
 
         return response()->json([
             'message' => 'Menu updated successfully',
-            'data' => $menu->load('currentPrice')
+            'data' => $menu
         ]);
     }
 

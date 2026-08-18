@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/admin_kasir_provider.dart';
 import '../models/user_model.dart';
+import '../core/theme/app_theme.dart';
 
 class KasirDashboardView extends StatefulWidget {
   const KasirDashboardView({super.key});
@@ -42,19 +43,19 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
       ),
     );
 
-    if (confirm == true && mounted) {
+    if (confirm == true) {
+      if (!mounted) return;
       final success = await Provider.of<AdminKasirProvider>(context, listen: false).deleteKasir(kasir.id!);
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Akun kasir berhasil dihapus')),
-          );
-        } else {
-          final err = Provider.of<AdminKasirProvider>(context, listen: false).errorMessage;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(err ?? 'Gagal menghapus kasir')),
-          );
-        }
+      if (!mounted) return;
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Akun kasir berhasil dihapus')),
+        );
+      } else {
+        final err = Provider.of<AdminKasirProvider>(context, listen: false).errorMessage;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err ?? 'Gagal menghapus kasir')),
+        );
       }
     }
   }
@@ -147,6 +148,7 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
         final kasirData = result['kasir'] as UserModel;
         final passData = result['password'] as String;
 
+        if (!mounted) return;
         final provider = Provider.of<AdminKasirProvider>(context, listen: false);
         bool success;
         
@@ -156,17 +158,16 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
           success = await provider.createKasir(kasirData, passData);
         }
 
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Berhasil menyimpan data kasir')),
-            );
-          } else {
-            final err = provider.errorMessage;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(err ?? 'Gagal menyimpan data kasir')),
-            );
-          }
+        if (!mounted) return;
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Berhasil menyimpan data kasir')),
+          );
+        } else {
+          final err = provider.errorMessage;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(err ?? 'Gagal menyimpan data kasir')),
+          );
         }
       }
     });
@@ -227,31 +228,65 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
                             )
                           : provider.kasirs.isEmpty
                               ? const Center(child: Text('Tidak ada data kasir.'))
-                              : ListView.builder(
+                              : ListView.separated(
                               padding: const EdgeInsets.all(16),
                               itemCount: provider.kasirs.length,
+                              separatorBuilder: (context, index) => const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final kasir = provider.kasirs[index];
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                                    child: Icon(Icons.person, color: Theme.of(context).primaryColor),
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                    border: Border.all(color: AppTheme.border),
                                   ),
-                                  title: Text(
-                                    kasir.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Text('@${kasir.username}'),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
                                     children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _showKasirFormDialog(kasir),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryLight,
+                                          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                        ),
+                                        child: const Icon(Icons.person_outline, color: AppTheme.primaryColor),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () => _deleteKasir(kasir),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              kasir.name,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '@${kasir.username}',
+                                              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              kasir.email ?? 'Tidak ada email',
+                                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Column(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryColor),
+                                            onPressed: () => _showKasirFormDialog(kasir),
+                                            tooltip: 'Edit',
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                                            onPressed: () => _deleteKasir(kasir),
+                                            tooltip: 'Hapus',
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

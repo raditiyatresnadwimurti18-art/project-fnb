@@ -8,6 +8,7 @@ class MenuModel {
   final bool isActive;
   final double price;
   final double? modal;
+  final int totalStock;
 
   MenuModel({
     this.id,
@@ -19,6 +20,7 @@ class MenuModel {
     required this.isActive,
     required this.price,
     this.modal,
+    this.totalStock = 0,
   });
 
   factory MenuModel.fromJson(Map<String, dynamic> json) {
@@ -29,11 +31,10 @@ class MenuModel {
       kategori: json['kategori'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       gambar: json['gambar'] ?? '',
-      isActive: json['is_active'] == 1 || json['is_active'] == true,
-      price: json['current_price'] != null 
-          ? double.tryParse(json['current_price']['new_price']?.toString() ?? '0') ?? 0
-          : double.tryParse(json['price']?.toString() ?? '0') ?? 0,
+      isActive: json['aktif'] == 1 || json['aktif'] == true || json['is_active'] == 1 || json['is_active'] == true,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
       modal: json['modal'] != null ? double.tryParse(json['modal'].toString()) : null,
+      totalStock: json['total_stock'] != null ? int.tryParse(json['total_stock'].toString()) ?? 0 : 0,
     );
   }
 
@@ -45,6 +46,7 @@ class MenuModel {
       'kategori': kategori,
       'deskripsi': deskripsi,
       'gambar': gambar,
+      'aktif': isActive ? 1 : 0,
       'is_active': isActive ? 1 : 0,
       'price': price,
       if (modal != null) 'modal': modal,

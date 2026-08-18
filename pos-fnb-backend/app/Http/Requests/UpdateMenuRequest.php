@@ -19,7 +19,6 @@ class UpdateMenuRequest extends FormRequest
             'kategori' => 'sometimes|required|string|max:255',
             'deskripsi' => 'nullable|string',
             'gambar' => 'nullable|string',
-            'modal' => 'sometimes|required|numeric|min:0',
             'is_active' => 'boolean',
         ];
     }

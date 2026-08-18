@@ -22,4 +22,7 @@ class ApiConfig {
   
   // Modul 5: Reports
   static const String reportsSales = '$baseUrl/reports/sales';
+
+  // Modul 6: Inventory
+  static const String inventory = '$baseUrl/inventory';
 }

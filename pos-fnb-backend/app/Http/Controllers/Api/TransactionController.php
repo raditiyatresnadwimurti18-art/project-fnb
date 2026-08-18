@@ -39,7 +39,7 @@ class TransactionController extends Controller
         $data = $request->validated();
 
         try {
-            $userId = auth()->id() ?? $data['user_id'] ?? null;
+            $userId = $data['user_id'];
             $paymentMethod = $data['payment_method'] ?? 'Cash';
 
             $transaction = $this->transactionService->checkout(

@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('nama_menu');
             $table->string('kategori');
             $table->text('deskripsi')->nullable();
+            $table->decimal('price', 15, 2)->default(0);
             $table->string('gambar')->nullable();
             $table->boolean('is_active')->default(true);
             $table->softDeletes();

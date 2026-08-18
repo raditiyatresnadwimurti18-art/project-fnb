@@ -33,9 +33,29 @@ class PromoController extends Controller
 
     public function update(Request $request, $id): JsonResponse
     {
-        // Simple update since rules are similar, just skipping validation request for brevity or creating UpdatePromoRequest
         $promo = Promo::findOrFail($id);
-        $promo->update($request->all());
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'type' => 'sometimes|required|in:discount,bogo',
+            'value' => 'nullable|numeric|min:0',
+            'is_percentage' => 'boolean',
+            'max_discount' => 'nullable|numeric|min:0',
+            'min_purchase' => 'nullable|numeric|min:0',
+            'buy_qty' => 'nullable|integer|min:1',
+            'free_qty' => 'nullable|integer|min:1',
+            'apply_multiple' => 'boolean',
+            'start_date' => 'sometimes|required|date',
+            'end_date' => 'sometimes|required|date|after_or_equal:start_date',
+            'is_active' => 'boolean',
+            'menu_id' => 'nullable|exists:menus,id',
+        ]);
+
+        // Protect system-managed fields from manual tampering
+        unset($validated['used_quota']);
+        unset($validated['quota']);
+
+        $promo->update($validated);
 
         return response()->json([
             'message' => 'Promo updated successfully',

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+
 import '../providers/auth_provider.dart';
+import '../providers/pos_provider.dart';
 import '../models/menu_model.dart';
 import '../models/promo_model.dart';
-import '../providers/pos_provider.dart';
-import 'package:intl/intl.dart';
+import '../core/theme/app_theme.dart';
+import '../core/widgets/shimmer_loading.dart';
+import '../core/widgets/custom_image_view.dart';
+import '../widgets/custom_numpad.dart';
 
 class PosDashboardPage extends StatefulWidget {
   const PosDashboardPage({super.key});
@@ -20,6 +25,9 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
     decimalDigits: 0,
   );
 
+  String _searchQuery = '';
+  String _selectedCategory = 'Semua';
+
   @override
   void initState() {
     super.initState();
@@ -28,125 +36,82 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
     });
   }
 
+  List<String> _getCategories(List<MenuModel> menus) {
+    final categories = menus.map((m) => m.kategori).toSet().toList();
+    categories.insert(0, 'Semua');
+    return categories;
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Konfirmasi Logout'),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      Provider.of<AuthProvider>(context, listen: false).logout();
+    }
+  }
+
+  List<MenuModel> _getFilteredMenus(List<MenuModel> menus) {
+    return menus.where((menu) {
+      final matchesSearch = menu.namaMenu.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCategory = _selectedCategory == 'Semua' || menu.kategori == _selectedCategory;
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
   Future<void> _handleCheckout(PosProvider provider) async {
-    final TextEditingController paymentController = TextEditingController();
     bool isProcessing = false;
 
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Pembayaran'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Tagihan: ${_currencyFormat.format(provider.finalTotal)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: paymentController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Uang Pembayaran (Rp)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
+          builder: (stateContext, setStateDialog) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: CustomNumpad(
+                totalTagihan: provider.finalTotal,
+                isProcessing: isProcessing,
+                onCancel: () => Navigator.pop(dialogContext),
+                onSubmit: (payment) async {
+                  setStateDialog(() => isProcessing = true);
+                  final success = await provider.checkout(payment);
+                  
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext); // Tutup dialog numpad
+                  
+                  if (!mounted) return;
+                  if (success) {
+                    _showSuccessDialog(provider.lastInvoiceNumber ?? '-', provider.lastChangeAmount);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(provider.errorMessage ?? 'Gagal checkout transaksi!'),
+                        backgroundColor: AppTheme.error,
+                      ),
+                    );
+                  }
+                },
               ),
-              actions: [
-                if (!isProcessing)
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Batal'),
-                  ),
-                ElevatedButton(
-                  onPressed: isProcessing
-                      ? null
-                      : () async {
-                          final payment =
-                              double.tryParse(paymentController.text) ?? 0;
-                          if (payment < provider.finalTotal) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Uang pembayaran kurang!'),
-                              ),
-                            );
-                            return;
-                          }
-                          setStateDialog(() => isProcessing = true);
-                          final success = await provider.checkout(payment);
-                          if (mounted) {
-                            Navigator.pop(context); // Tutup dialog pembayaran
-                            if (success) {
-                              final change = provider.lastChangeAmount;
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (context) => AlertDialog(
-                                  title: const Text(
-                                    'Transaksi Berhasil!',
-                                    style: TextStyle(color: Colors.green),
-                                  ),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Invoice: ${provider.lastInvoiceNumber}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Kembalian: ${_currencyFormat.format(change)}',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.blue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Tutup / Cetak Struk'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(provider.errorMessage ?? 'Gagal checkout transaksi!'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  child: isProcessing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text('Bayar'),
-                ),
-              ],
             );
           },
         );
@@ -154,301 +119,590 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
     );
   }
 
+  void _showSuccessDialog(String invoice, double change) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+        child: Container(
+          width: 350,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: AppTheme.successLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle, color: AppTheme.success, size: 48),
+              ),
+              const SizedBox(height: 24),
+              const Text('Transaksi Berhasil!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Invoice: $invoice', style: const TextStyle(color: AppTheme.textSecondary)),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Divider(), 
+              ),
+              const Text('Kembalian', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(
+                _currencyFormat.format(change),
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.primaryColor),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Transaksi Baru', style: TextStyle(fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 800;
-    return Consumer<PosProvider>(
-      builder: (context, provider, child) {
-        return Scaffold(
-          backgroundColor: Colors.grey.shade50,
-          appBar: AppBar(
-            title: const Text(
-              'FNB Cashier POS',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: Colors.white,
-            actions: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Center(
-                  child: Text(
-                    'Kasir: ${Provider.of<AuthProvider>(context, listen: false).role}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black54,
+    final authProvider = Provider.of<AuthProvider>(context);
+    
+    return Scaffold(
+      body: Consumer<PosProvider>(
+        builder: (context, provider, child) {
+          provider.currentUserId = authProvider.userId ?? 1;
+          
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 900;
+              
+              return Row(
+                children: [
+                  // Left Side: Main Content (Menu Grid)
+                  Expanded(
+                    flex: isDesktop ? 7 : 1,
+                    child: Column(
+                      children: [
+                        _buildHeader(provider, isDesktop),
+                        _buildFilterBar(provider),
+                        Expanded(child: _buildMenuGrid(provider, isDesktop)),
+                      ],
                     ),
                   ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.red),
-                tooltip: 'Logout',
+                  
+                  // Right Side: Cart Sidebar (Desktop only)
+                  if (isDesktop) ...[
+                    const VerticalDivider(width: 1),
+                    SizedBox(
+                      width: 400, // Fixed width for sidebar looks better than flex
+                      child: _buildCartPanel(provider, isMobile: false),
+                    ),
+                  ],
+                ],
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth > 900;
+          if (isDesktop) return const SizedBox.shrink();
+          
+          return Consumer<PosProvider>(
+            builder: (context, provider, child) {
+              if (provider.cart.isEmpty) return const SizedBox.shrink();
+              return FloatingActionButton.extended(
+                backgroundColor: AppTheme.primaryColor,
                 onPressed: () {
-                  Provider.of<AuthProvider>(context, listen: false).logout();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) {
+                      return DraggableScrollableSheet(
+                        initialChildSize: 0.9,
+                        maxChildSize: 0.95,
+                        minChildSize: 0.5,
+                        builder: (_, controller) {
+                          return Container(
+                            decoration: const BoxDecoration(
+                              color: AppTheme.background,
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                            ),
+                            child: _buildCartPanel(provider, isMobile: true),
+                          );
+                        },
+                      );
+                    },
+                  );
                 },
-              ),
-            ],
-          ),
-          floatingActionButton: isDesktop
-              ? null
-              : FloatingActionButton.extended(
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) {
-                        return DraggableScrollableSheet(
-                          initialChildSize: 0.8,
-                          maxChildSize: 0.9,
-                          minChildSize: 0.5,
-                          builder: (_, controller) {
-                            return Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
-                                ),
-                              ),
-                              child: _buildCartSidebar(
-                                provider,
-                                isMobile: true,
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.shopping_cart),
-                  label: Text('${provider.cart.length} Item'),
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                label: Text(
+                  '${provider.cart.length} Item • ${_currencyFormat.format(provider.finalTotal)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-          body: Row(
-            children: [
-              // Left Side: Menu Grid
-              Expanded(
-                flex: 7,
-                child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Pilih Menu',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: GridView.builder(
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: isDesktop ? 3 : 2,
-                                      childAspectRatio: isDesktop ? 0.85 : 0.75,
-                                      crossAxisSpacing: 16,
-                                      mainAxisSpacing: 16,
-                                    ),
-                                itemCount: provider.menus.length,
-                                itemBuilder: (context, index) {
-                                  final menu = provider.menus[index];
-                                  return _buildMenuCard(menu, provider);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-              if (isDesktop) ...[
-                // Vertical Divider
-                Container(width: 1, color: Colors.grey.shade200),
-                // Right Side: Cart
-                Expanded(
-                  flex: 3,
-                  child: _buildCartSidebar(provider, isMobile: false),
+              );
+            },
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildHeader(PosProvider provider, bool isDesktop) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      color: AppTheme.surface,
+      child: Row(
+        children: [
+          if (!isDesktop) ...[
+            const Icon(Icons.point_of_sale, color: AppTheme.primaryColor),
+            const SizedBox(width: 12),
+          ],
+          const Text(
+            'Kasir',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.person, size: 16, color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  (Provider.of<AuthProvider>(context, listen: false).role ?? '').toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
                 ),
               ],
-            ],
+            ),
           ),
-        );
+          const SizedBox(width: 16),
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
+            tooltip: 'Logout',
+            onPressed: _confirmLogout,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(PosProvider provider) {
+    final categories = _getCategories(provider.menus);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      color: AppTheme.background,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Search Bar
+          TextField(
+            onChanged: (val) => setState(() => _searchQuery = val),
+            decoration: InputDecoration(
+              hintText: 'Cari menu...',
+              prefixIcon: const Icon(Icons.search, color: AppTheme.textHint),
+              filled: true,
+              fillColor: AppTheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Category Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: categories.map((cat) {
+                final isSelected = _selectedCategory == cat;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(cat),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) setState(() => _selectedCategory = cat);
+                    },
+                    backgroundColor: AppTheme.surface,
+                    selectedColor: AppTheme.primaryColor,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : AppTheme.textPrimary,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    side: BorderSide(color: isSelected ? AppTheme.primaryColor : AppTheme.border),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuGrid(PosProvider provider, bool isDesktop) {
+    if (provider.isLoading) {
+      return GridView.builder(
+        padding: const EdgeInsets.all(24),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 220,
+          childAspectRatio: 0.8,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: 8, // dummy count for shimmer
+        itemBuilder: (context, index) => _buildMenuShimmer(),
+      );
+    }
+
+    final filteredMenus = _getFilteredMenus(provider.menus);
+
+    if (filteredMenus.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: AppTheme.border),
+            SizedBox(height: 16),
+            Text('Menu tidak ditemukan', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(24),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 220, // Responsive columns instead of fixed count
+        childAspectRatio: 0.8,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: filteredMenus.length,
+      itemBuilder: (context, index) {
+        return _buildMenuCard(filteredMenus[index], provider);
       },
     );
   }
 
-  Widget _buildCartSidebar(PosProvider provider, {required bool isMobile}) {
-    return Container(
-      color: Colors.white,
+  Widget _buildMenuShimmer() {
+    return Card(
+      elevation: 0,
+      color: AppTheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        side: const BorderSide(color: AppTheme.border),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-              borderRadius: isMobile
-                  ? const BorderRadius.vertical(top: Radius.circular(20))
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.shopping_cart, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text(
-                      'Pesanan Saat Ini',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                if (isMobile)
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-              ],
-            ),
+          const Expanded(
+            flex: 3,
+            child: ShimmerLoading(width: double.infinity, height: double.infinity, borderRadius: AppTheme.radiusMedium),
           ),
-          const Divider(height: 1),
           Expanded(
-            child: provider.cart.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Belum ada pesanan',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: provider.cart.length,
-                    itemBuilder: (context, index) {
-                      final id = provider.cart.keys.elementAt(index);
-                      final qty = provider.cart[id]!;
-                      final menu = provider.menus.firstWhere((m) => m.id == id);
-                      return _buildCartItem(menu, qty, provider);
-                    },
-                  ),
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  ShimmerLoading(width: double.infinity, height: 16),
+                  SizedBox(height: 8),
+                  ShimmerLoading(width: 80, height: 16),
+                ],
+              ),
+            ),
           ),
-          _buildCheckoutSection(provider),
         ],
       ),
     );
   }
 
   Widget _buildMenuCard(MenuModel menu, PosProvider provider) {
-    return InkWell(
-      onTap: () => provider.addToCart(menu),
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                child: Image.network(
-                  menu.gambar,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Icon(
-                      Icons.fastfood,
-                      size: 40,
-                      color: Colors.grey,
+    final qtyInCart = provider.cart[menu.id] ?? 0;
+    
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+      child: InkWell(
+        onTap: () => provider.addToCart(menu),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            border: Border.all(color: qtyInCart > 0 ? AppTheme.primaryColor : AppTheme.border, width: qtyInCart > 0 ? 2 : 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMedium - 2)),
+                      child: CustomImageView(
+                        imageString: menu.gambar,
+                        fit: BoxFit.cover,
+                        fallback: Container(
+                          color: AppTheme.background,
+                          child: const Icon(Icons.fastfood, size: 40, color: AppTheme.textHint),
+                        ),
+                      ),
                     ),
+                    if (qtyInCart > 0)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$qtyInCart',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        menu.namaMenu,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _currencyFormat.format(menu.price),
+                        style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 13,
+                            color: menu.totalStock <= 5
+                                ? Colors.red
+                                : menu.totalStock <= 10
+                                    ? Colors.orange
+                                    : Colors.green,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Stok: ${menu.totalStock}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: menu.totalStock <= 5
+                                  ? Colors.red
+                                  : menu.totalStock <= 10
+                                      ? Colors.orange
+                                      : Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCartPanel(PosProvider provider, {required bool isMobile}) {
+    return Container(
+      color: AppTheme.surface,
+      child: Column(
+        children: [
+          // Header Sticky
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              border: const Border(bottom: BorderSide(color: AppTheme.border)),
+              borderRadius: isMobile ? const BorderRadius.vertical(top: Radius.circular(24)) : null,
             ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    menu.namaMenu,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Pesanan Saat Ini',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                ),
+                if (isMobile)
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _currencyFormat.format(menu.price),
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.w600,
+              ],
+            ),
+          ),
+          
+          // Scrollable Cart Items
+          Expanded(
+            child: provider.cart.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.shopping_cart_outlined, size: 64, color: AppTheme.border),
+                        SizedBox(height: 16),
+                        Text('Belum ada pesanan', style: TextStyle(color: AppTheme.textSecondary)),
+                      ],
                     ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: provider.cart.length,
+                    separatorBuilder: (context, index) => const Divider(height: 24),
+                    itemBuilder: (context, index) {
+                      final id = provider.cart.keys.elementAt(index);
+                      final qty = provider.cart[id]!;
+                      final menu = provider.menus.firstWhere((m) => m.id == id);
+                      
+                      return isMobile 
+                        ? Dismissible(
+                            key: Key('cart_item_$id'),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              color: AppTheme.error,
+                              child: const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            onDismissed: (_) {
+                              // Completely remove item logic requires modifying provider or calling remove multiple times
+                              // Since we can't change provider, we will just call remove until qty is 0
+                              for(int i=0; i<qty; i++){
+                                provider.removeFromCart(menu);
+                              }
+                            },
+                            child: _buildCartItem(menu, qty, provider),
+                          )
+                        : _buildCartItem(menu, qty, provider);
+                    },
+                  ),
+          ),
+          
+          // Footer Sticky (Checkout Section)
+          _buildCheckoutSection(provider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartItem(MenuModel menu, int qty, PosProvider provider) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Image thumbnail
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+          child: CustomImageView(
+            imageString: menu.gambar,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            fallback: Container(
+              width: 60, height: 60, color: AppTheme.background,
+              child: const Icon(Icons.image, color: AppTheme.textHint),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Details
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                menu.namaMenu,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _currencyFormat.format(menu.price),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Controls & Price
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              _currencyFormat.format(menu.price * qty),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppTheme.border),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove, size: 18),
+                    onPressed: () => provider.removeFromCart(menu),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                  ),
+                  Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.add, size: 18),
+                    onPressed: () => provider.addToCart(menu),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCartItem(MenuModel menu, int qty, PosProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-            onPressed: () => provider.removeFromCart(menu),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${qty}x',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  menu.namaMenu,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  _currencyFormat.format(menu.price),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            _currencyFormat.format(menu.price * qty),
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -456,7 +710,7 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -467,18 +721,13 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
       ),
       child: Column(
         children: [
-          // Promo Selector
           if (provider.promos.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
+              padding: const EdgeInsets.only(bottom: 16.0),
               child: DropdownButtonFormField<PromoModel>(
                 decoration: const InputDecoration(
                   labelText: 'Gunakan Promo',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  prefixIcon: Icon(Icons.local_offer_outlined, color: AppTheme.primaryColor),
                 ),
                 initialValue: provider.selectedPromo,
                 isExpanded: true,
@@ -487,133 +736,110 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                     value: null,
                     child: Text('Tanpa Promo', overflow: TextOverflow.ellipsis),
                   ),
-                  ...provider.promos.map(
-                    (p) {
-                      String benefit = p.type == 'discount'
-                          ? (p.isPercentage ? '${p.value}%' : _currencyFormat.format(p.value))
-                          : 'Beli ${p.buyQty ?? 1} Gratis ${p.freeQty ?? 1}';
-                      
-                      String minPurchaseStr = p.minPurchase > 0 
-                          ? ' | Min. ${_currencyFormat.format(p.minPurchase)}' 
-                          : '';
+                  ...provider.promos.map((p) {
+                    String benefit = p.type == 'discount'
+                        ? (p.isPercentage ? '${p.value}%' : _currencyFormat.format(p.value))
+                        : 'Beli ${p.buyQty ?? 1} Gratis ${p.freeQty ?? 1}';
+                    
+                    bool isOutOfQuota = p.quota > 0 && p.usedQuota >= p.quota;
 
-                      return DropdownMenuItem(
-                        value: p, 
-                        child: Text(
-                          '${p.name} ($benefit$minPurchaseStr)',
-                          overflow: TextOverflow.ellipsis,
+                    return DropdownMenuItem(
+                      value: p, 
+                      enabled: !isOutOfQuota,
+                      child: Text(
+                        '${p.name} ($benefit)${isOutOfQuota ? ' - Habis' : ''}',
+                        style: TextStyle(
+                          color: isOutOfQuota ? AppTheme.textHint : AppTheme.textPrimary,
                         ),
-                      );
-                    }
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }),
+                ],
+                onChanged: (val) => provider.selectPromo(val),
+              ),
+            ),
+            
+          // Inline Promo Warning (Better UX than Dialog)
+          if (provider.errorMessage != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningLight,
+                border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      provider.errorMessage!,
+                      style: const TextStyle(color: AppTheme.warning, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
-                onChanged: (val) {
-                  provider.selectPromo(val);
-                },
               ),
             ),
-          if (provider.errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Text(
-                provider.errorMessage!,
-                style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-              ),
-            ),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Subtotal',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+              const Text('Subtotal', style: TextStyle(color: AppTheme.textSecondary)),
               Text(
                 _currencyFormat.format(provider.subtotal),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
+          
           if (provider.discountTotal > 0) ...[
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Diskon Promo',
-                  style: TextStyle(fontSize: 16, color: Colors.green),
-                ),
+                const Text('Diskon Promo', style: TextStyle(color: AppTheme.success)),
                 Text(
                   '-${_currencyFormat.format(provider.discountTotal)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.success),
                 ),
               ],
             ),
           ],
-          const SizedBox(height: 8),
-          const Divider(height: 24, thickness: 1),
+          
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(),
+          ),
+          
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total Bayar',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-              ),
-              Flexible(
-                child: provider.isCalculating
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          _currencyFormat.format(provider.finalTotal),
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                      ),
-              ),
+              const Text('Total Bayar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              provider.isCalculating
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(
+                      _currencyFormat.format(provider.finalTotal),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.primaryColor),
+                    ),
             ],
           ),
           const SizedBox(height: 20),
+          
           SizedBox(
             width: double.infinity,
-            height: 56,
             child: ElevatedButton(
-              onPressed:
-                  provider.cart.isEmpty ||
-                      provider.isCalculating ||
-                      provider.isLoading ||
-                      provider.errorMessage != null
+              onPressed: provider.cart.isEmpty || provider.isCalculating || provider.isLoading || provider.errorMessage != null
                   ? null
                   : () => _handleCheckout(provider),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade300,
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: provider.isLoading && provider.cart.isNotEmpty
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Checkout',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Checkout', style: TextStyle(fontSize: 18)),
             ),
           ),
         ],

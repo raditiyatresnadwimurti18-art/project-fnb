@@ -24,6 +24,8 @@ class PosProvider with ChangeNotifier {
   double discountTotal = 0;
   double finalTotal = 0;
 
+  int currentUserId = 1;
+
   String? lastInvoiceNumber;
   double lastChangeAmount = 0;
   String? errorMessage;
@@ -33,7 +35,8 @@ class PosProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      menus = await _menuRepository.getMenus();
+      final allMenus = await _menuRepository.getMenus();
+      menus = allMenus.where((m) => m.isActive == true).toList();
       final allPromos = await _promoRepository.getPromos();
       promos = allPromos.where((p) => p.isActive == true).toList();
     } catch (e) {
@@ -91,7 +94,7 @@ class PosProvider with ChangeNotifier {
         promoId: selectedPromo?.id,
         items: cart.entries.map((e) => TransactionItemModel(menuId: e.key, qty: e.value)).toList(),
         paymentAmount: 0,
-        userId: 1,
+        userId: currentUserId,
       );
       
       final result = await _transactionRepository.calculateCart(transaction);
@@ -129,7 +132,7 @@ class PosProvider with ChangeNotifier {
         promoId: selectedPromo?.id,
         items: cart.entries.map((e) => TransactionItemModel(menuId: e.key, qty: e.value)).toList(),
         paymentAmount: paymentAmount,
-        userId: 1,
+        userId: currentUserId,
       );
       
       final result = await _transactionRepository.checkout(transaction);

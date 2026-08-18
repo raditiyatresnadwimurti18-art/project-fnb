@@ -19,10 +19,10 @@ class PromoCalculationService
 
         // Calculate Subtotal
         foreach ($items as $item) {
-            $menu = Menu::with('currentPrice')->find($item['menu_id']);
+            $menu = Menu::find($item['menu_id']);
             if (!$menu) continue;
 
-            $price = $menu->currentPrice ? (float) $menu->currentPrice->new_price : 0;
+            $price = (float) $menu->price;
             $itemSubtotal = $price * $item['qty'];
             $subtotal += $itemSubtotal;
 
