@@ -361,9 +361,9 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
     if (provider.isLoading) {
       return GridView.builder(
         padding: const EdgeInsets.all(24),
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 220,
-          childAspectRatio: 0.8,
+          childAspectRatio: 0.72,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
@@ -391,7 +391,7 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
       padding: const EdgeInsets.all(24),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220, // Responsive columns instead of fixed count
-        childAspectRatio: 0.8,
+        childAspectRatio: 0.72,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -420,7 +420,7 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -492,16 +492,18 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
               Expanded(
                 flex: 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Text(
-                        menu.namaMenu,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Text(
+                          menu.namaMenu,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(

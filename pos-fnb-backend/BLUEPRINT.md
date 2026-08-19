@@ -78,28 +78,27 @@ app/
 ├── Http/
 │   ├── Controllers/
 │   │   └── Api/
-│   │       ├── MenuController.php
+│   │       ├── AuthController.php
+│   │       ├── InventoryController.php
 │   │       ├── KasirController.php
+│   │       ├── MenuController.php
 │   │       ├── PromoController.php
+│   │       ├── ReportController.php
 │   │       └── TransactionController.php
-│   └── Requests/ (Validasi Input Form)
-│       ├── Menu/
-│       │   ├── StoreMenuRequest.php
-│       │   └── UpdateMenuRequest.php
-│       ├── PriceHistory/
-│       │   └── StorePriceHistoryRequest.php
-│       ├── Promo/
-│       │   ├── StorePromoRequest.php
-│       │   └── UpdatePromoRequest.php
-│       └── Transaction/
-│           ├── CalculateTransactionRequest.php
-│           └── StoreTransactionRequest.php
+│   └── Requests/ (Validasi Input Form — flat structure)
+│       ├── CalculateTransactionRequest.php
+│       ├── StoreInventoryBatchRequest.php
+│       ├── StoreMenuRequest.php
+│       ├── StorePromoRequest.php
+│       ├── StoreTransactionRequest.php
+│       └── UpdateMenuRequest.php
 ├── Models/
-│   ├── Menu.php
 │   ├── InventoryBatch.php
+│   ├── Menu.php
 │   ├── Promo.php
 │   ├── Transaction.php
-│   └── TransactionItem.php
+│   ├── TransactionItem.php
+│   └── User.php
 └── Services/
     ├── PromoCalculationService.php   (Menangani logika rumit perhitungan Diskon & BOGO)
     └── TransactionService.php        (Menangani proses checkout, pembayaran, potong kuota)
@@ -111,28 +110,60 @@ app/
 
 Semua endpoint memiliki awalan `/api`. Response dikembalikan murni dalam bentuk **JSON**.
 
-| Method | URI | Deskripsi |
-|---|---|---|
-| **Modul 1: Manajemen Menu** | | |
-| GET | `/menus` | Menampilkan semua menu (beserta harga aktif saat ini). |
-| POST | `/menus` | Membuat menu baru. |
-| GET | `/menus/{id}` | Mengambil detail spesifik dari satu menu. |
-| PUT | `/menus/{id}` | Mengubah data menu (TIDAK TERMASUK harga). |
-| DELETE | `/menus/{id}` | Menghapus menu secara perlahan (Soft Delete). |
-| **Modul 2: Manajemen Harga** | | |
-| GET | `/menus/{menu_id}/prices` | Melihat riwayat perubahan harga dari sebuah menu. |
-| POST | `/menus/{menu_id}/prices` | Menetapkan/menaikkan/menurunkan harga menu (Tercatat sebagai riwayat baru). |
-| **Modul 3: Manajemen Promo** | | |
-| GET | `/promos` | Menampilkan semua daftar promo. |
-| POST | `/promos` | Membuat promo baru (Tipe Diskon atau BOGO). |
-| GET | `/promos/{id}` | Mengambil detail sebuah promo. |
-| PUT | `/promos/{id}` | Mengubah data promo. |
-| DELETE | `/promos/{id}` | Menghapus atau menonaktifkan promo. |
-| **Modul 4: Transaksi POS (Kasir)** | | |
-| POST | `/transactions/calculate` | **Engine Kalkulasi:** Menghitung total pesanan dan memotong diskon tanpa menyimpan transaksi (Sangat berguna untuk fitur *Live Cart Preview* di Flutter). |
-| POST | `/transactions` | **Checkout:** Memproses pembayaran, menyimpan data, memotong kuota promo, menghitung kembalian, & membuat struk akhir (invoice). |
-| GET | `/transactions/{invoice_number}`| Menampilkan ulang struk transaksi sebelumnya berdasarkan nomor nota. |
+| Method | URI | Auth | Deskripsi |
+|---|---|---|---|
+| **Modul 0: Autentikasi** | | | |
+| POST | `/login` | ❌ | Login & dapatkan token. |
+| POST | `/logout` | 🔒 | Logout & hapus token saat ini. |
+| GET | `/user` | 🔒 | Data user yang sedang login. |
+| **Modul 0.5: Manajemen Kasir** | | | |
+| GET | `/kasir` | 🔒👑 | Menampilkan semua kasir. |
+| POST | `/kasir` | 🔒👑 | Menambah kasir baru. |
+| GET | `/kasir/{id}` | 🔒 | Detail kasir (Admin / self). |
+| PUT | `/kasir/{id}` | 🔒 | Edit kasir (Admin / self). |
+| DELETE | `/kasir/{id}` | 🔒👑 | Hapus akun kasir. |
+| **Modul 1: Manajemen Menu** | | | |
+| GET | `/categories` | ❌ | Daftar kategori (public). |
+| GET | `/menus` | 🔒 | Menampilkan semua menu (beserta total_stock & is_active). |
+| POST | `/menus` | 🔒 | Membuat menu baru (kode_menu auto-generate). |
+| GET | `/menus/{id}` | 🔒 | Mengambil detail spesifik dari satu menu. |
+| PUT | `/menus/{id}` | 🔒 | Mengubah data menu. |
+| DELETE | `/menus/{id}` | 🔒 | Soft Delete menu + hapus inventory batch terkait. |
+| **Modul 3: Manajemen Promo** | | | |
+| GET | `/promos` | 🔒 | Menampilkan semua daftar promo. |
+| POST | `/promos` | 🔒 | Membuat promo baru (Tipe Diskon atau BOGO). |
+| GET | `/promos/{id}` | 🔒 | Mengambil detail sebuah promo. |
+| PUT | `/promos/{id}` | 🔒 | Mengubah data promo. |
+| DELETE | `/promos/{id}` | 🔒 | Menghapus promo. |
+| **Modul 4: Transaksi POS (Kasir)** | | | |
+| POST | `/transactions/calculate` | 🔒 | **Engine Kalkulasi:** Preview total pesanan & diskon tanpa menyimpan (untuk *Live Cart Preview* di Flutter). |
+| POST | `/transactions` | 🔒 | **Checkout:** Proses pembayaran, simpan data, potong kuota promo, hitung kembalian, buat invoice. |
+| GET | `/transactions/{invoice_number}` | 🔒 | Menampilkan ulang struk transaksi berdasarkan nomor nota. |
+| **Modul 5: Laporan** | | | |
+| GET | `/reports/sales` | 🔒 | Laporan penjualan (summary, per menu, per kasir, per promo). |
+| **Modul 6: Inventory** | | | |
+| GET | `/inventory` | 🔒 | Lihat semua inventory batch (summary + detail). |
+| GET | `/inventory/{menuId}` | 🔒 | Lihat inventory per menu. |
+| POST | `/inventory/add-stock` | 🔒 | Tambah stok (pembelian batch baru). |
+| POST | `/inventory/adjust-stock` | 🔒 | Kurangi stok / penyesuaian (FIFO). |
 
+> **Legenda:** ❌ = Public, 🔒 = Auth Required, 👑 = Admin Only
 
-(UNTUK UPDATE VPS LINUX GUNAKAN PERINTAH)
-[sudo ./update.sh]
+---
+
+## 4. Catatan Penting
+
+- **Soft Delete Menu:** Saat menu dihapus (`DELETE /menus/{id}`), seluruh `inventory_batches` terkait juga dihapus secara manual di controller, karena SoftDeletes tidak memicu `cascadeOnDelete` pada level database.
+- **Modul Harga:** Sistem `price_histories` sudah dihapus. Harga jual disimpan langsung di kolom `price` pada tabel `menus`.
+- **Kode Menu:** Auto-generate berdasarkan kategori: `MKN-xxx`, `MNM-xxx`, `DSS-xxx`, `COF-xxx`, `OTH-xxx`.
+- **is_active:** Computed attribute dari `total_stock > 0`, tidak ada di database.
+
+---
+
+## 5. Update VPS (Linux)
+
+```bash
+cd /var/www/folder_project/pos-fnb-backend
+sudo ./update.sh
+```
+

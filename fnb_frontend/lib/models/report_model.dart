@@ -7,6 +7,7 @@ class ReportSummaryModel {
   final double netRevenue;
   final double totalCogs;
   final double grossProfit;
+  final double totalInventoryAsset;
 
   ReportSummaryModel({
     required this.totalTransactions,
@@ -15,6 +16,7 @@ class ReportSummaryModel {
     required this.netRevenue,
     required this.totalCogs,
     required this.grossProfit,
+    required this.totalInventoryAsset,
   });
 
   factory ReportSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class ReportSummaryModel {
       netRevenue: double.tryParse(json['net_revenue']?.toString() ?? '0') ?? 0.0,
       totalCogs: double.tryParse(json['total_cogs']?.toString() ?? '0') ?? 0.0,
       grossProfit: double.tryParse(json['gross_profit']?.toString() ?? '0') ?? 0.0,
+      totalInventoryAsset: double.tryParse(json['total_inventory_asset']?.toString() ?? '0') ?? 0.0,
     );
   }
 }

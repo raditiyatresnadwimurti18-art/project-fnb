@@ -45,7 +45,18 @@ class KasirRepository {
         final resData = decoded is Map && decoded.containsKey('data') ? decoded['data'] : decoded;
         return UserModel.fromJson(resData);
       } else {
-        throw Exception('Gagal menambah kasir: ${response.statusCode}');
+        try {
+          final decoded = json.decode(response.body);
+          if (response.statusCode == 422 && decoded.containsKey('errors')) {
+            final errors = decoded['errors'] as Map<String, dynamic>;
+            final firstErrorMsg = errors.values.first[0];
+            throw Exception(firstErrorMsg);
+          }
+          throw Exception(decoded['message'] ?? 'Gagal menambah kasir: ${response.statusCode}');
+        } catch (e) {
+          if (e.toString().contains('Exception:')) rethrow;
+          throw Exception('Gagal menambah kasir: ${response.statusCode}');
+        }
       }
     } catch (e) {
       throw Exception('Error: $e');
@@ -83,7 +94,18 @@ class KasirRepository {
         final resData = decoded is Map && decoded.containsKey('data') ? decoded['data'] : decoded;
         return UserModel.fromJson(resData);
       } else {
-        throw Exception('Gagal mengubah kasir: ${response.statusCode}');
+        try {
+          final decoded = json.decode(response.body);
+          if (response.statusCode == 422 && decoded.containsKey('errors')) {
+            final errors = decoded['errors'] as Map<String, dynamic>;
+            final firstErrorMsg = errors.values.first[0];
+            throw Exception(firstErrorMsg);
+          }
+          throw Exception(decoded['message'] ?? 'Gagal mengubah kasir: ${response.statusCode}');
+        } catch (e) {
+          if (e.toString().contains('Exception:')) rethrow;
+          throw Exception('Gagal mengubah kasir: ${response.statusCode}');
+        }
       }
     } catch (e) {
       throw Exception('Error: $e');

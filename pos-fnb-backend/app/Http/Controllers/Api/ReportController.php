@@ -25,18 +25,14 @@ class ReportController extends Controller
         $netRevenue = $transactions->sum('total_amount');
         $totalTransactions = $transactions->count();
 
-        // Calculate COGS/Modal from items
+        // Calculate COGS/Modal from transaction items (untuk analisis per menu)
         $transactionIds = $transactions->pluck('id');
         
         $items = TransactionItem::with('menu')->whereIn('transaction_id', $transactionIds)->get();
         
-        $totalCogs = 0;
         $salesByMenuRaw = [];
 
         foreach ($items as $item) {
-            $itemCogs = $item->modal_saat_ini; // Already calculated as total COGS via FIFO
-            $totalCogs += $itemCogs;
-            
             // Menu Analytics logic
             if (!isset($salesByMenuRaw[$item->menu_id])) {
                 $salesByMenuRaw[$item->menu_id] = [
@@ -49,10 +45,21 @@ class ReportController extends Controller
             }
             $salesByMenuRaw[$item->menu_id]['qty_sold'] += $item->qty;
             $salesByMenuRaw[$item->menu_id]['gross_revenue'] += $item->subtotal;
-            $salesByMenuRaw[$item->menu_id]['cogs'] += $itemCogs;
+            $salesByMenuRaw[$item->menu_id]['cogs'] += $item->modal_saat_ini;
         }
 
+        // Total Modal (COGS/HPP) = total harga modal dari barang yang TERJUAL pada transaksi di periode tersebut
+        $totalCogs = $items->sum('modal_saat_ini');
+
+        // Laba Kotor (Gross Profit) = Pendapatan Bersih (Net Revenue) - Harga Pokok Penjualan (COGS)
         $grossProfit = $netRevenue - $totalCogs;
+
+        // Total Kekayaan Persediaan (Inventory Asset) = total modal stok barang yang masih BELUM terjual
+        $totalInventoryAsset = \App\Models\InventoryBatch::where('qty_remaining', '>', 0)
+            ->get()
+            ->sum(function ($batch) {
+                return $batch->qty_remaining * $batch->modal;
+            });
         
         // Convert to indexed array and sort by qty_sold descending
         $salesByMenu = array_values($salesByMenuRaw);
@@ -101,6 +108,7 @@ class ReportController extends Controller
                     'net_revenue' => $netRevenue,
                     'total_cogs' => $totalCogs,
                     'gross_profit' => $grossProfit,
+                    'total_inventory_asset' => $totalInventoryAsset,
                 ],
                 'sales_by_menu' => $salesByMenu,
                 'promo_analytics' => $promoAnalytics,

@@ -35,6 +35,11 @@ class Menu extends Model
         return $this->hasMany(InventoryBatch::class);
     }
 
+    public function promos()
+    {
+        return $this->hasMany(Promo::class);
+    }
+
     public function getTotalStockAttribute()
     {
         return $this->inventoryBatches()->sum('qty_remaining') ?? 0;

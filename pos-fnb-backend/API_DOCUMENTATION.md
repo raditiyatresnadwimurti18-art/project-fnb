@@ -342,7 +342,7 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
   }
   ```
 
-### 14. Hapus Menu (Soft Delete)
+### 14. Hapus Menu (Soft Delete + Hapus Inventory)
 - **URL:** `DELETE /menus/{id}`
 - **Auth:** 🔒 Bearer Token
 - **Response Sukses (200):**
@@ -353,7 +353,8 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
   ```
 
 > [!NOTE]
-> Menu yang dihapus hanya di-soft delete (kolom `deleted_at` diisi). Data tetap tersimpan untuk riwayat transaksi.
+> Menu yang dihapus di-soft delete (kolom `deleted_at` diisi). Data tetap tersimpan untuk riwayat transaksi.
+> **Seluruh `inventory_batches` terkait menu ini juga akan dihapus secara otomatis**, karena SoftDeletes tidak memicu `cascadeOnDelete` di level database.
 
 ---
 
@@ -733,7 +734,8 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
               "total_discount": 100000,
               "net_revenue": 7500000,
               "total_cogs": 4000000,
-              "gross_profit": 3500000
+              "gross_profit": 3500000,
+              "total_inventory_asset": 1500000
           },
           "sales_by_menu": [
               {
@@ -778,6 +780,7 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
   | `net_revenue`      | Pendapatan bersih (`gross_revenue - discount`)  |
   | `total_cogs`       | Total Harga Pokok Penjualan (modal via FIFO)    |
   | `gross_profit`     | Laba Kotor (`net_revenue - total_cogs`)         |
+  | `total_inventory_asset` | Total nilai persediaan barang yang belum terjual |
 
 ---
 
@@ -976,7 +979,7 @@ Setiap pembelian stok dicatat sebagai *Batch*. Saat checkout, stok dikurangi dar
 | 11 | `GET`    | `/menus/{id}`                   | 🔒   | Detail menu                     |
 | 12 | `POST`   | `/menus`                        | 🔒   | Tambah menu baru                |
 | 13 | `PUT`    | `/menus/{id}`                   | 🔒   | Edit menu                       |
-| 14 | `DELETE` | `/menus/{id}`                   | 🔒   | Hapus menu (soft delete)        |
+| 14 | `DELETE` | `/menus/{id}`                   | 🔒   | Hapus menu (soft delete + hapus inventory) |
 | 15 | `GET`    | `/promos`                       | 🔒   | List semua promo                |
 | 16 | `GET`    | `/promos/{id}`                  | 🔒   | Detail promo                    |
 | 17 | `POST`   | `/promos`                       | 🔒   | Tambah promo baru               |

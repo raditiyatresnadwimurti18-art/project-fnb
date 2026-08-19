@@ -70,7 +70,7 @@ class MenuSeeder extends Seeder
                 'nama_menu' => 'Es Jeruk Peras',
                 'kategori' => 'Minuman',
                 'deskripsi' => 'Perasan jeruk segar asli dengan gula cair alami.',
-                'gambar' => 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80',
+                'gambar' => 'https://images.unsplash.com/photo-1611162458324-aae1eb4129a4?auto=format&fit=crop&w=500&q=80',
                 'price' => 8000,
                 'modal' => 3000,
                 'stock' => 80,
@@ -134,7 +134,7 @@ class MenuSeeder extends Seeder
                 'nama_menu' => 'Dimsum Siomay Ayam',
                 'kategori' => 'Snack',
                 'deskripsi' => 'Dimsum ayam lezat kukus isi 4 potong.',
-                'gambar' => 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=500&q=80',
+                'gambar' => 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=500&q=80',
                 'price' => 18000,
                 'modal' => 10000,
                 'stock' => 50,
@@ -174,7 +174,8 @@ class MenuSeeder extends Seeder
         ];
 
         foreach ($menus as $menuData) {
-            $stock = $menuData['stock'];
+            // Set stock to random between 10 and 20 as requested
+            $stock = rand(10, 20);
             unset($menuData['stock']);
 
             $menu = Menu::create($menuData);

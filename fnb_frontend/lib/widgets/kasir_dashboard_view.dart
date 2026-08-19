@@ -86,6 +86,7 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
                 TextFormField(
                   controller: usernameController,
                   decoration: const InputDecoration(labelText: 'Username *'),
+                  autofillHints: const [],
                   validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
                 ),
                 TextFormField(
@@ -104,6 +105,7 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
                     labelText: isEdit ? 'Password Baru (Kosongkan jika tidak diubah)' : 'Password *',
                   ),
                   obscureText: true,
+                  autofillHints: const [],
                   validator: (v) {
                     if (!isEdit && v!.isEmpty) {
                       return 'Password wajib diisi untuk kasir baru';

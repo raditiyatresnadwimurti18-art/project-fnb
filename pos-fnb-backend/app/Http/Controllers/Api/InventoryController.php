@@ -18,7 +18,12 @@ class InventoryController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = InventoryBatch::with('menu:id,nama_menu,kategori,price')
+        $query = InventoryBatch::with(['menu' => function ($q) {
+                $q->withTrashed()->select('id', 'nama_menu', 'kategori', 'price');
+            }])
+            ->whereHas('menu', function ($q) {
+                $q->whereNull('deleted_at'); // Hanya tampilkan inventory dari menu yang belum dihapus
+            })
             ->orderBy('purchased_at', 'desc')
             ->orderBy('id', 'desc');
 
@@ -69,7 +74,7 @@ class InventoryController extends Controller
      */
     public function show(int $menuId): JsonResponse
     {
-        $menu = \App\Models\Menu::findOrFail($menuId);
+        $menu = \App\Models\Menu::withTrashed()->findOrFail($menuId);
 
         $batches = InventoryBatch::where('menu_id', $menuId)
             ->orderBy('purchased_at', 'desc')

@@ -185,6 +185,13 @@ class _ReportDashboardViewState extends State<ReportDashboardView> {
                               icon: Icons.trending_up,
                               color: Colors.teal,
                             ),
+                            _buildSummaryCard(
+                              context,
+                              title: 'Total Nilai Persediaan',
+                              value: _currencyFormat.format(provider.reportData!.summary.totalInventoryAsset),
+                              icon: Icons.inventory,
+                              color: Colors.deepPurple,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 32),

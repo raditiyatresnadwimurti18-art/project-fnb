@@ -247,8 +247,17 @@ erDiagram
 | `transactions.user_id`             | `users`        | SET NULL   | Riwayat transaksi tetap ada walau kasir dihapus    |
 | `transaction_items.transaction_id` | `transactions` | CASCADE    | Item ikut terhapus jika transaksi dihapus          |
 | `transaction_items.menu_id`        | `menus`        | RESTRICT   | Tidak boleh hapus menu yang punya riwayat transaksi|
-| `inventory_batches.menu_id`        | `menus`        | CASCADE    | Batch ikut terhapus jika menu dihapus              |
-| `promos.menu_id`                   | `menus`        | CASCADE    | Promo ikut terhapus jika menu target dihapus       |
+| `inventory_batches.menu_id`        | `menus`        | CASCADE*   | Batch ikut terhapus jika menu dihapus              |
+| `promos.menu_id`                   | `menus`        | CASCADE*   | Promo ikut terhapus jika menu target dihapus       |
+
+> **\*Catatan Penting — SoftDeletes pada `menus`:**
+> Karena model `Menu` menggunakan **SoftDeletes**, penghapusan menu (`$menu->delete()`) hanya mengisi kolom `deleted_at` — **tidak** benar-benar menghapus row dari tabel `menus`. Akibatnya, **semua `cascadeOnDelete` di level database tidak akan terpicu**.
+>
+> Oleh karena itu, penghapusan relasi dilakukan secara **manual di `MenuController@destroy`:**
+> 1. `$menu->inventoryBatches()->delete()` — Hapus semua batch stok
+> 2. `$menu->promos()->delete()` — Hapus semua promo terkait menu
+>
+> Constraint `RESTRICT` pada `transaction_items.menu_id` juga **tidak berlaku** karena SoftDeletes — menu tetap bisa di-soft-delete walau ada riwayat transaksi. Data transaksi tetap aman karena `TransactionItem` menggunakan `withTrashed()` untuk mengakses menu yang sudah dihapus.
 
 ---
 

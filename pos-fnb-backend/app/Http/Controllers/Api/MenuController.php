@@ -78,6 +78,12 @@ class MenuController extends Controller
     public function destroy($id): JsonResponse
     {
         $menu = Menu::findOrFail($id);
+
+        // SoftDeletes tidak memicu cascadeOnDelete di database,
+        // jadi semua relasi yang seharusnya CASCADE harus dihapus manual.
+        $menu->inventoryBatches()->delete();  // inventory_batches.menu_id → CASCADE
+        $menu->promos()->delete();            // promos.menu_id → CASCADE
+
         $menu->delete();
 
         return response()->json(['message' => 'Menu deleted successfully']);
