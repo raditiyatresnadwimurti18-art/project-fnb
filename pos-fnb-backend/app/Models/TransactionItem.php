@@ -16,6 +16,7 @@ class TransactionItem extends Model
         'price',
         'subtotal',
         'modal_saat_ini',
+        'is_free',
     ];
 
     protected $casts = [

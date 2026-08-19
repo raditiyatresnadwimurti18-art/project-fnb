@@ -6,6 +6,7 @@ class ReportSummaryModel {
   final double totalDiscount;
   final double netRevenue;
   final double totalCogs;
+  final double promoExpense;
   final double grossProfit;
   final double totalInventoryAsset;
 
@@ -15,6 +16,7 @@ class ReportSummaryModel {
     required this.totalDiscount,
     required this.netRevenue,
     required this.totalCogs,
+    required this.promoExpense,
     required this.grossProfit,
     required this.totalInventoryAsset,
   });
@@ -26,6 +28,7 @@ class ReportSummaryModel {
       totalDiscount: double.tryParse(json['total_discount']?.toString() ?? '0') ?? 0.0,
       netRevenue: double.tryParse(json['net_revenue']?.toString() ?? '0') ?? 0.0,
       totalCogs: double.tryParse(json['total_cogs']?.toString() ?? '0') ?? 0.0,
+      promoExpense: double.tryParse(json['promo_expense']?.toString() ?? '0') ?? 0.0,
       grossProfit: double.tryParse(json['gross_profit']?.toString() ?? '0') ?? 0.0,
       totalInventoryAsset: double.tryParse(json['total_inventory_asset']?.toString() ?? '0') ?? 0.0,
     );
@@ -104,6 +107,29 @@ class SalesByKasirModel {
   }
 }
 
+class InvoiceModel {
+  final String invoiceNumber;
+  final double totalAmount;
+  final String createdAt;
+  final String kasirName;
+
+  InvoiceModel({
+    required this.invoiceNumber,
+    required this.totalAmount,
+    required this.createdAt,
+    required this.kasirName,
+  });
+
+  factory InvoiceModel.fromJson(Map<String, dynamic> json) {
+    return InvoiceModel(
+      invoiceNumber: json['invoice_number'] ?? '',
+      totalAmount: double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
+      createdAt: json['created_at'] ?? '',
+      kasirName: json['kasir_name'] ?? 'Unknown',
+    );
+  }
+}
+
 class ReportResponseModel {
   final String? startDate;
   final String? endDate;
@@ -111,6 +137,7 @@ class ReportResponseModel {
   final List<SalesByMenuModel> salesByMenu;
   final List<PromoAnalyticsModel> promoAnalytics;
   final List<SalesByKasirModel> salesByKasir;
+  final List<InvoiceModel> invoices;
 
   ReportResponseModel({
     this.startDate,
@@ -119,6 +146,7 @@ class ReportResponseModel {
     required this.salesByMenu,
     required this.promoAnalytics,
     required this.salesByKasir,
+    required this.invoices,
   });
 
   factory ReportResponseModel.fromJson(Map<String, dynamic> json) {
@@ -137,6 +165,10 @@ class ReportResponseModel {
           [],
       salesByKasir: (json['sales_by_kasir'] as List?)
               ?.map((item) => SalesByKasirModel.fromJson(item))
+              .toList() ??
+          [],
+      invoices: (json['invoices'] as List?)
+              ?.map((item) => InvoiceModel.fromJson(item))
               .toList() ??
           [],
     );

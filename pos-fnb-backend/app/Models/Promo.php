@@ -25,6 +25,7 @@ class Promo extends Model
         'used_quota',
         'is_active',
         'menu_id',
+        'free_menu_id',
     ];
 
     protected $casts = [
@@ -46,5 +47,10 @@ class Promo extends Model
     public function menu()
     {
         return $this->belongsTo(Menu::class);
+    }
+
+    public function freeMenu()
+    {
+        return $this->belongsTo(Menu::class, 'free_menu_id');
     }
 }

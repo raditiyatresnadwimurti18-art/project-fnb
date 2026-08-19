@@ -65,6 +65,14 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
       ),
     );
     if (confirm == true && mounted) {
+      final posProvider = Provider.of<PosProvider>(context, listen: false);
+      posProvider.cart.clear();
+      posProvider.selectPromo(null);
+      posProvider.calculatedItems.clear();
+      posProvider.subtotal = 0;
+      posProvider.discountTotal = 0;
+      posProvider.finalTotal = 0;
+      
       Provider.of<AuthProvider>(context, listen: false).logout();
     }
   }
@@ -156,6 +164,21 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Tutup dialog sukses
+                    _showInvoiceDialog(invoice);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppTheme.primaryColor),
+                  ),
+                  child: const Text('Lihat Detail Transaksi', style: TextStyle(fontSize: 16, color: AppTheme.primaryColor)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
@@ -165,6 +188,183 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showInvoiceDialog(String invoiceNumber) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: Provider.of<PosProvider>(context, listen: false).getInvoiceData(invoiceNumber),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 300,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return SizedBox(
+                  height: 300,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
+                      const SizedBox(height: 16),
+                      Text('Gagal memuat invoice', style: TextStyle(color: AppTheme.error)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Tutup'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              final data = snapshot.data!;
+              final items = data['items'] as List<dynamic>? ?? [];
+              final subtotal = double.tryParse(data['subtotal']?.toString() ?? '0') ?? 0;
+              final discount = double.tryParse(data['discount_amount']?.toString() ?? '0') ?? 0;
+              final total = double.tryParse(data['total_amount']?.toString() ?? '0') ?? 0;
+              final payment = double.tryParse(data['payment_amount']?.toString() ?? '0') ?? 0;
+              final change = double.tryParse(data['change_amount']?.toString() ?? '0') ?? 0;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Detail Transaksi', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Text('Invoice: ${data['invoice_number']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text('Kasir: ${data['user']?['name'] ?? '-'}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  Text('Tanggal: ${data['created_at'] != null ? DateFormat('dd MMM yyyy HH:mm').format(DateTime.parse(data['created_at'])) : '-'}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 16),
+                  
+                  // Items
+                  const Text('Daftar Pesanan:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 250),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: items.length,
+                        separatorBuilder: (ctx, i) => const Divider(height: 16),
+                        itemBuilder: (ctx, index) {
+                          final item = items[index];
+                          final qty = item['qty'] ?? 1;
+                          final price = double.tryParse(item['price']?.toString() ?? '0') ?? 0;
+                          final menuName = item['menu']?['nama_menu'] ?? 'Item $index';
+                          final isFree = price == 0;
+                          
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${qty}x', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(menuName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    if (isFree)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        decoration: BoxDecoration(color: AppTheme.successLight, borderRadius: BorderRadius.circular(4)),
+                                        child: const Text('GRATIS', style: TextStyle(color: AppTheme.success, fontSize: 10, fontWeight: FontWeight.bold)),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Text(isFree ? 'Rp 0' : _currencyFormat.format(price * qty)),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(thickness: 2),
+                  ),
+                  
+                  // Summary
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Subtotal'),
+                      Text(_currencyFormat.format(subtotal)),
+                    ],
+                  ),
+                  if (discount > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Diskon Promo', style: TextStyle(color: AppTheme.success)),
+                        Text('-${_currencyFormat.format(discount)}', style: const TextStyle(color: AppTheme.success)),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Bayar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(_currencyFormat.format(total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Tunai', style: TextStyle(color: AppTheme.textSecondary)),
+                            Text(_currencyFormat.format(payment)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Kembalian', style: TextStyle(color: AppTheme.textSecondary)),
+                            Text(_currencyFormat.format(change), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -592,33 +792,60 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(20),
-                    itemCount: provider.cart.length,
+                    itemCount: provider.calculatedItems.isNotEmpty ? provider.calculatedItems.length : provider.cart.length,
                     separatorBuilder: (context, index) => const Divider(height: 24),
                     itemBuilder: (context, index) {
-                      final id = provider.cart.keys.elementAt(index);
-                      final qty = provider.cart[id]!;
-                      final menu = provider.menus.firstWhere((m) => m.id == id);
-                      
-                      return isMobile 
-                        ? Dismissible(
-                            key: Key('cart_item_$id'),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 20),
-                              color: AppTheme.error,
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            onDismissed: (_) {
-                              // Completely remove item logic requires modifying provider or calling remove multiple times
-                              // Since we can't change provider, we will just call remove until qty is 0
-                              for(int i=0; i<qty; i++){
-                                provider.removeFromCart(menu);
-                              }
-                            },
-                            child: _buildCartItem(menu, qty, provider),
-                          )
-                        : _buildCartItem(menu, qty, provider);
+                      if (provider.calculatedItems.isNotEmpty) {
+                        final itemData = provider.calculatedItems[index];
+                        final menuId = itemData['menu_id'] as int;
+                        final qty = itemData['qty'] as int;
+                        final isFree = itemData['is_free'] == true;
+                        final promoName = itemData['promo_name'] as String?;
+                        final menu = provider.menus.firstWhere((m) => m.id == menuId);
+                        
+                        return isMobile && !isFree
+                          ? Dismissible(
+                              key: Key('cart_item_$menuId'),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                color: AppTheme.error,
+                                child: const Icon(Icons.delete, color: Colors.white),
+                              ),
+                              onDismissed: (_) {
+                                for(int i=0; i<qty; i++){
+                                  provider.removeFromCart(menu);
+                                }
+                              },
+                              child: _buildCartItem(menu, qty, provider, isFree: isFree, promoName: promoName),
+                            )
+                          : _buildCartItem(menu, qty, provider, isFree: isFree, promoName: promoName);
+                      } else {
+                        // Fallback jika API gagal
+                        final id = provider.cart.keys.elementAt(index);
+                        final qty = provider.cart[id]!;
+                        final menu = provider.menus.firstWhere((m) => m.id == id);
+                        
+                        return isMobile 
+                          ? Dismissible(
+                              key: Key('cart_item_$id'),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                color: AppTheme.error,
+                                child: const Icon(Icons.delete, color: Colors.white),
+                              ),
+                              onDismissed: (_) {
+                                for(int i=0; i<qty; i++){
+                                  provider.removeFromCart(menu);
+                                }
+                              },
+                              child: _buildCartItem(menu, qty, provider),
+                            )
+                          : _buildCartItem(menu, qty, provider);
+                      }
                     },
                   ),
           ),
@@ -630,7 +857,7 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
     );
   }
 
-  Widget _buildCartItem(MenuModel menu, int qty, PosProvider provider) {
+  Widget _buildCartItem(MenuModel menu, int qty, PosProvider provider, {bool isFree = false, String? promoName}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -654,17 +881,44 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                menu.namaMenu,
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      menu.namaMenu,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isFree)
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successLight,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('GRATIS', style: TextStyle(color: AppTheme.success, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
-                _currencyFormat.format(menu.price),
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                isFree ? 'Rp 0' : _currencyFormat.format(menu.price),
+                style: TextStyle(
+                  color: isFree ? AppTheme.success : AppTheme.textSecondary,
+                  fontSize: 13,
+                  decoration: isFree ? TextDecoration.lineThrough : null,
+                ),
               ),
+              if (promoName != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  promoName,
+                  style: const TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontStyle: FontStyle.italic),
+                ),
+              ],
             ],
           ),
         ),
@@ -674,34 +928,43 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              _currencyFormat.format(menu.price * qty),
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              isFree ? 'Rp 0' : _currencyFormat.format(menu.price * qty),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isFree ? AppTheme.success : AppTheme.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: AppTheme.border),
-                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            if (!isFree)
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppTheme.border),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove, size: 18),
+                      onPressed: () => provider.removeFromCart(menu),
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      padding: EdgeInsets.zero,
+                    ),
+                    Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.add, size: 18),
+                      onPressed: () => provider.addToCart(menu),
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Text('${qty}x', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove, size: 18),
-                    onPressed: () => provider.removeFromCart(menu),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    padding: EdgeInsets.zero,
-                  ),
-                  Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  IconButton(
-                    icon: const Icon(Icons.add, size: 18),
-                    onPressed: () => provider.addToCart(menu),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ],
@@ -726,15 +989,15 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
           if (provider.promos.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
-              child: DropdownButtonFormField<PromoModel>(
+              child: DropdownButtonFormField<int?>(
                 decoration: const InputDecoration(
                   labelText: 'Gunakan Promo',
                   prefixIcon: Icon(Icons.local_offer_outlined, color: AppTheme.primaryColor),
                 ),
-                initialValue: provider.selectedPromo,
+                initialValue: provider.selectedPromo?.id,
                 isExpanded: true,
                 items: [
-                  const DropdownMenuItem<PromoModel>(
+                  const DropdownMenuItem<int?>(
                     value: null,
                     child: Text('Tanpa Promo', overflow: TextOverflow.ellipsis),
                   ),
@@ -745,8 +1008,8 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                     
                     bool isOutOfQuota = p.quota > 0 && p.usedQuota >= p.quota;
 
-                    return DropdownMenuItem(
-                      value: p, 
+                    return DropdownMenuItem<int?>(
+                      value: p.id, 
                       enabled: !isOutOfQuota,
                       child: Text(
                         '${p.name} ($benefit)${isOutOfQuota ? ' - Habis' : ''}',
@@ -758,7 +1021,18 @@ class _PosDashboardPageState extends State<PosDashboardPage> {
                     );
                   }),
                 ],
-                onChanged: (val) => provider.selectPromo(val),
+                onChanged: (val) {
+                  if (val == null) {
+                    provider.selectPromo(null);
+                  } else {
+                    try {
+                      final selected = provider.promos.firstWhere((p) => p.id == val);
+                      provider.selectPromo(selected);
+                    } catch (_) {
+                      provider.selectPromo(null);
+                    }
+                  }
+                },
               ),
             ),
             

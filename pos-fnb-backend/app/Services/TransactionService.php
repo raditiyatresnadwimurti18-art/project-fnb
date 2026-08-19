@@ -118,6 +118,7 @@ class TransactionService
                     'price' => $itemData['price'],
                     'subtotal' => $itemData['subtotal'],
                     'modal_saat_ini' => $totalCogs, // Storing TOTAL COGS for this item based on FIFO
+                    'is_free' => $itemData['is_free'] ?? false,
                 ]);
             }
 

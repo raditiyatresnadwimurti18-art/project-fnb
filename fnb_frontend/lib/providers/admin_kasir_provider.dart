@@ -8,6 +8,7 @@ class AdminKasirProvider with ChangeNotifier {
   List<UserModel> kasirs = [];
   bool isLoading = true;
   String? errorMessage;
+  String? actionErrorMessage;
 
   Future<void> loadKasirs() async {
     isLoading = true;
@@ -25,9 +26,6 @@ class AdminKasirProvider with ChangeNotifier {
   }
 
   Future<bool> createKasir(UserModel kasir, String password) async {
-    isLoading = true;
-    notifyListeners();
-
     try {
       final data = kasir.toJson();
       data['password'] = password;
@@ -35,17 +33,12 @@ class AdminKasirProvider with ChangeNotifier {
       await loadKasirs();
       return true;
     } catch (e) {
-      errorMessage = e.toString().replaceAll('Exception: ', '');
-      isLoading = false;
-      notifyListeners();
+      actionErrorMessage = e.toString().replaceAll('Exception: ', '');
       return false;
     }
   }
 
   Future<bool> updateKasir(UserModel kasir, String? newPassword) async {
-    isLoading = true;
-    notifyListeners();
-
     try {
       final data = kasir.toJson();
       if (newPassword != null) {
@@ -55,25 +48,18 @@ class AdminKasirProvider with ChangeNotifier {
       await loadKasirs();
       return true;
     } catch (e) {
-      errorMessage = e.toString().replaceAll('Exception: ', '');
-      isLoading = false;
-      notifyListeners();
+      actionErrorMessage = e.toString().replaceAll('Exception: ', '');
       return false;
     }
   }
 
   Future<bool> deleteKasir(int id) async {
-    isLoading = true;
-    notifyListeners();
-
     try {
       await _kasirRepository.deleteKasir(id);
       await loadKasirs();
       return true;
     } catch (e) {
-      errorMessage = e.toString().replaceAll('Exception: ', '');
-      isLoading = false;
-      notifyListeners();
+      actionErrorMessage = e.toString().replaceAll('Exception: ', '');
       return false;
     }
   }

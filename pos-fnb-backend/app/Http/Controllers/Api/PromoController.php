@@ -49,6 +49,7 @@ class PromoController extends Controller
             'end_date' => 'sometimes|required|date|after_or_equal:start_date',
             'is_active' => 'boolean',
             'menu_id' => 'nullable|exists:menus,id',
+            'free_menu_id' => 'nullable|required_if:type,bogo|exists:menus,id',
         ]);
 
         // Protect system-managed fields from manual tampering

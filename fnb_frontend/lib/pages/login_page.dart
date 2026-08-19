@@ -71,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
                   color: AppTheme.primaryColor,
                   image: DecorationImage(
                     // Memberikan pattern samar atau biarkan solid
-                    image: AssetImage('assets/pattern.png'), 
+                    image: AssetImage('assets/pattern.png'),
                     fit: BoxFit.cover,
                     opacity: 0.05,
                   ),
@@ -80,7 +80,11 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.storefront_outlined, size: 120, color: Colors.white),
+                      Icon(
+                        Icons.storefront_outlined,
+                        size: 120,
+                        color: Colors.white,
+                      ),
                       SizedBox(height: 32),
                       Text(
                         'POS FNB System',
@@ -125,7 +129,11 @@ class _LoginPageState extends State<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (!isDesktop) ...[
-                          const Icon(Icons.storefront, size: 64, color: AppTheme.primaryColor),
+                          const Icon(
+                            Icons.storefront,
+                            size: 64,
+                            color: AppTheme.primaryColor,
+                          ),
                           const SizedBox(height: 24),
                         ],
                         Text(
@@ -136,7 +144,9 @@ class _LoginPageState extends State<LoginPage> {
                             color: AppTheme.textPrimary,
                             letterSpacing: -0.5,
                           ),
-                          textAlign: isDesktop ? TextAlign.left : TextAlign.center,
+                          textAlign: isDesktop
+                              ? TextAlign.left
+                              : TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -145,7 +155,9 @@ class _LoginPageState extends State<LoginPage> {
                             fontSize: 16,
                             color: AppTheme.textSecondary,
                           ),
-                          textAlign: isDesktop ? TextAlign.left : TextAlign.center,
+                          textAlign: isDesktop
+                              ? TextAlign.left
+                              : TextAlign.center,
                         ),
                         const SizedBox(height: 48),
 
@@ -155,18 +167,28 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: InputDecoration(
                             labelText: 'Username',
                             hintText: 'Masukkan username',
-                            prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textSecondary),
+                            prefixIcon: const Icon(
+                              Icons.person_outline,
+                              color: AppTheme.textSecondary,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.border),
+                              borderSide: const BorderSide(
+                                color: AppTheme.border,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.border),
+                              borderSide: const BorderSide(
+                                color: AppTheme.border,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                              borderSide: const BorderSide(
+                                color: AppTheme.primaryColor,
+                                width: 2,
+                              ),
                             ),
                             filled: true,
                             fillColor: Colors.white,
@@ -188,10 +210,15 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: InputDecoration(
                             labelText: 'Password',
                             hintText: 'Masukkan password',
-                            prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: AppTheme.textSecondary,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
                                 color: AppTheme.textSecondary,
                               ),
                               onPressed: () {
@@ -202,15 +229,22 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.border),
+                              borderSide: const BorderSide(
+                                color: AppTheme.border,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.border),
+                              borderSide: const BorderSide(
+                                color: AppTheme.border,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                              borderSide: const BorderSide(
+                                color: AppTheme.primaryColor,
+                                width: 2,
+                              ),
                             ),
                             filled: true,
                             fillColor: Colors.white,
@@ -230,7 +264,9 @@ class _LoginPageState extends State<LoginPage> {
                         SizedBox(
                           height: 54,
                           child: ElevatedButton(
-                            onPressed: authProvider.isLoading ? null : _handleLogin,
+                            onPressed: authProvider.isLoading
+                                ? null
+                                : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
                               foregroundColor: Colors.white,
@@ -259,17 +295,8 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Footer / Support text
-                        Center(
-                          child: Text(
-                            'Butuh bantuan? Hubungi Administrator',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),

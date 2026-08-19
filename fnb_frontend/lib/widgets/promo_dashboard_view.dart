@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/promo_model.dart';
 import '../providers/admin_promo_provider.dart';
+import '../providers/admin_menu_provider.dart';
+import '../models/menu_model.dart';
 import 'package:intl/intl.dart';
 import '../core/theme/app_theme.dart';
 
@@ -20,6 +22,7 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AdminPromoProvider>(context, listen: false).loadPromos();
+      Provider.of<AdminMenuProvider>(context, listen: false).loadMenus();
     });
   }
 
@@ -72,6 +75,27 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
 
     DateTime startDate = promo?.startDate ?? DateTime.now();
     DateTime endDate = promo?.endDate ?? DateTime.now().add(const Duration(days: 7));
+
+    final menuProvider = Provider.of<AdminMenuProvider>(context, listen: false);
+    final allMenus = menuProvider.menus;
+    final categories = allMenus.map((e) => e.kategori).toSet().toList();
+
+    int? menuId = promo?.menuId;
+    int? freeMenuId = promo?.freeMenuId;
+
+    String? selectedCategoryBuy;
+    if (menuId != null) {
+      try {
+        selectedCategoryBuy = allMenus.firstWhere((e) => e.id == menuId).kategori;
+      } catch (_) {}
+    }
+
+    String? selectedCategoryFree;
+    if (freeMenuId != null) {
+      try {
+        selectedCategoryFree = allMenus.firstWhere((e) => e.id == freeMenuId).kategori;
+      } catch (_) {}
+    }
 
     await showDialog(
       context: context,
@@ -131,10 +155,46 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Kategori Menu Yang Dibeli', border: OutlineInputBorder()),
+                      value: selectedCategoryBuy,
+                      items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      onChanged: (v) => setStateDialog(() {
+                        selectedCategoryBuy = v;
+                        menuId = null; // reset menu selection
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      decoration: const InputDecoration(labelText: 'Pilih Menu Yang Dibeli', border: OutlineInputBorder()),
+                      value: menuId,
+                      items: allMenus.where((m) => m.kategori == selectedCategoryBuy).map((m) => DropdownMenuItem(value: m.id, child: Text(m.namaMenu))).toList(),
+                      onChanged: (v) => setStateDialog(() => menuId = v),
+                      validator: (v) => v == null ? 'Wajib pilih menu' : null,
+                    ),
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: freeQtyController,
                       decoration: const InputDecoration(labelText: 'Gratis Y', border: OutlineInputBorder()),
                       keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Kategori Menu Gratis', border: OutlineInputBorder()),
+                      value: selectedCategoryFree,
+                      items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      onChanged: (v) => setStateDialog(() {
+                        selectedCategoryFree = v;
+                        freeMenuId = null; // reset free menu selection
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      decoration: const InputDecoration(labelText: 'Pilih Menu Gratis', border: OutlineInputBorder()),
+                      value: freeMenuId,
+                      items: allMenus.where((m) => m.kategori == selectedCategoryFree).map((m) => DropdownMenuItem(value: m.id, child: Text(m.namaMenu))).toList(),
+                      onChanged: (v) => setStateDialog(() => freeMenuId = v),
+                      validator: (v) => v == null ? 'Wajib pilih menu gratis' : null,
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
@@ -195,6 +255,8 @@ class _PromoDashboardViewState extends State<PromoDashboardView> {
                     buyQty: type == 'bogo' ? int.tryParse(buyQtyController.text) ?? 1 : null,
                     freeQty: type == 'bogo' ? int.tryParse(freeQtyController.text) ?? 1 : null,
                     applyMultiple: type == 'bogo' ? applyMultiple : null,
+                    menuId: type == 'bogo' ? menuId : null,
+                    freeMenuId: type == 'bogo' ? freeMenuId : null,
                   );
                   Navigator.pop(context, newPromo);
                 }

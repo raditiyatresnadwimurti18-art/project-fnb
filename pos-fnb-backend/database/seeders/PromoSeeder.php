@@ -54,6 +54,8 @@ class PromoSeeder extends Seeder
             'is_percentage' => false,
             'max_discount' => null,
             'min_purchase' => null,
+            'menu_id' => 4, // ID untuk Es Teh Manis (MN-005)
+            'free_menu_id' => 4, // ID untuk Es Teh Manis
             'buy_qty' => 2,
             'free_qty' => 1,
             'apply_multiple' => true,

@@ -57,10 +57,13 @@ class PromoCalculationService
                     $eligibleSubtotal = array_sum(array_column($eligibleItems, 'subtotal'));
                     $discountAmount = $this->calculateDiscount($promo, $eligibleSubtotal);
                 } elseif ($promo->type === 'bogo') {
-                    $discountAmount = $this->calculateBogo($promo, $eligibleItems);
-                    if ($discountAmount == 0) {
+                    $freeItems = $this->calculateBogo($promo, $eligibleItems);
+                    if (empty($freeItems)) {
                         throw new \Exception('Jumlah pesanan Anda belum memenuhi syarat Beli X Gratis Y promo ini.');
                     }
+                    
+                    // Inject free items to cart
+                    $itemsData = array_merge($itemsData, $freeItems);
                 }
             }
         }
@@ -112,10 +115,10 @@ class PromoCalculationService
         return (float) $promo->value;
     }
 
-    private function calculateBogo(Promo $promo, $itemsData)
+    private function calculateBogo(Promo $promo, $eligibleItems)
     {
-        $totalQty = array_sum(array_column($itemsData, 'qty'));
-        if ($promo->buy_qty === null || $totalQty < $promo->buy_qty) return 0;
+        $totalQty = array_sum(array_column($eligibleItems, 'qty'));
+        if ($promo->buy_qty === null || $totalQty < $promo->buy_qty) return [];
         
         $multiplier = 1;
         if ($promo->apply_multiple) {
@@ -124,28 +127,19 @@ class PromoCalculationService
 
         $freeItemsAllowed = $multiplier * ($promo->free_qty ?? 1);
         
-        if ($freeItemsAllowed <= 0) return 0;
+        if ($freeItemsAllowed <= 0 || !$promo->free_menu_id) return [];
 
-        // Sort items by price ascending to discount the cheapest items
-        usort($itemsData, function ($a, $b) {
-            return $a['price'] <=> $b['price'];
-        });
+        $freeMenu = Menu::find($promo->free_menu_id);
+        if (!$freeMenu) return [];
 
-        $discount = 0;
-        $freeItemsGiven = 0;
-
-        foreach ($itemsData as $item) {
-            $qtyToDiscount = min($item['qty'], $freeItemsAllowed - $freeItemsGiven);
-            if ($qtyToDiscount > 0) {
-                $discount += $item['price'] * $qtyToDiscount;
-                $freeItemsGiven += $qtyToDiscount;
-            }
-
-            if ($freeItemsGiven >= $freeItemsAllowed) {
-                break;
-            }
-        }
-
-        return $discount;
+        return [[
+            'menu_id' => $freeMenu->id,
+            'qty' => $freeItemsAllowed,
+            'price' => 0,
+            'subtotal' => 0,
+            'modal' => $freeMenu->modal,
+            'is_free' => true,
+            'promo_name' => $promo->name,
+        ]];
     }
 }

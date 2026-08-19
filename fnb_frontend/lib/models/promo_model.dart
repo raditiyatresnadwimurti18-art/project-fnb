@@ -11,10 +11,12 @@ class PromoModel {
   final int quota;
   final int usedQuota;
   final bool isActive;
-  // BOGO Fields
+  // BOGO & Menu Fields
   final int? buyQty;
   final int? freeQty;
   final bool? applyMultiple;
+  final int? menuId;
+  final int? freeMenuId;
 
   PromoModel({
     this.id,
@@ -32,6 +34,8 @@ class PromoModel {
     this.buyQty,
     this.freeQty,
     this.applyMultiple,
+    this.menuId,
+    this.freeMenuId,
   });
 
   factory PromoModel.fromJson(Map<String, dynamic> json) {
@@ -51,6 +55,8 @@ class PromoModel {
       buyQty: json['buy_qty'],
       freeQty: json['free_qty'],
       applyMultiple: json['apply_multiple'],
+      menuId: json['menu_id'],
+      freeMenuId: json['free_menu_id'],
     );
   }
 
@@ -68,9 +74,11 @@ class PromoModel {
       'quota': quota,
       'used_quota': usedQuota,
       'is_active': isActive,
+      if (menuId != null) 'menu_id': menuId,
       if (type == 'bogo') 'buy_qty': buyQty,
       if (type == 'bogo') 'free_qty': freeQty,
       if (type == 'bogo') 'apply_multiple': applyMultiple,
+      if (type == 'bogo' && freeMenuId != null) 'free_menu_id': freeMenuId,
     };
   }
 }

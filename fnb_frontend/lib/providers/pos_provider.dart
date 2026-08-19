@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../repositories/menu_repository.dart';
 import '../models/menu_model.dart';
@@ -23,6 +24,8 @@ class PosProvider with ChangeNotifier {
   double subtotal = 0;
   double discountTotal = 0;
   double finalTotal = 0;
+
+  List<Map<String, dynamic>> calculatedItems = [];
 
   int currentUserId = 1;
 
@@ -75,12 +78,18 @@ class PosProvider with ChangeNotifier {
     _calculateCart();
   }
 
-  Future<void> _calculateCart() async {
+  int _calculationVersion = 0;
+  Timer? _calculationDebounce;
+
+  void _calculateCart() {
     if (cart.isEmpty) {
+      _calculationDebounce?.cancel();
       subtotal = 0;
       discountTotal = 0;
       finalTotal = 0;
+      calculatedItems = [];
       errorMessage = null;
+      isCalculating = false;
       notifyListeners();
       return;
     }
@@ -89,37 +98,50 @@ class PosProvider with ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    try {
-      final transaction = TransactionModel(
-        promoId: selectedPromo?.id,
-        items: cart.entries.map((e) => TransactionItemModel(menuId: e.key, qty: e.value)).toList(),
-        paymentAmount: 0,
-        userId: currentUserId,
-      );
+    _calculationDebounce?.cancel();
+    _calculationDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final currentVersion = ++_calculationVersion;
       
-      final result = await _transactionRepository.calculateCart(transaction);
-      
-      subtotal = double.tryParse(result['subtotal']?.toString() ?? '0') ?? 0;
-      discountTotal = double.tryParse(result['discount_amount']?.toString() ?? '0') ?? 0;
-      finalTotal = double.tryParse(result['total_amount']?.toString() ?? '0') ?? 0;
-    } catch (e) {
-      errorMessage = e.toString().replaceAll('Exception: ', '');
-      
-      // Hitung subtotal manual agar UI tetap terupdate meski API menolak promo
-      double tempSubtotal = 0;
-      for (var entry in cart.entries) {
-        try {
-          final menu = menus.firstWhere((m) => m.id == entry.key);
-          tempSubtotal += menu.price * entry.value;
-        } catch (_) {}
+      try {
+        final transaction = TransactionModel(
+          promoId: selectedPromo?.id,
+          items: cart.entries.map((e) => TransactionItemModel(menuId: e.key, qty: e.value)).toList(),
+          paymentAmount: 0,
+          userId: currentUserId,
+        );
+        
+        final result = await _transactionRepository.calculateCart(transaction);
+        
+        if (currentVersion == _calculationVersion) {
+          subtotal = double.tryParse(result['subtotal']?.toString() ?? '0') ?? 0;
+          discountTotal = double.tryParse(result['discount_amount']?.toString() ?? '0') ?? 0;
+          finalTotal = double.tryParse(result['total_amount']?.toString() ?? '0') ?? 0;
+          calculatedItems = List<Map<String, dynamic>>.from(result['items'] ?? []);
+        }
+      } catch (e) {
+        if (currentVersion == _calculationVersion) {
+          errorMessage = e.toString().replaceAll('Exception: ', '');
+          
+          // Hitung subtotal manual agar UI tetap terupdate meski API menolak promo
+          double tempSubtotal = 0;
+          for (var entry in cart.entries) {
+            try {
+              final menu = menus.firstWhere((m) => m.id == entry.key);
+              tempSubtotal += menu.price * entry.value;
+            } catch (_) {}
+          }
+          subtotal = tempSubtotal;
+          discountTotal = 0;
+          finalTotal = tempSubtotal;
+          calculatedItems = [];
+        }
       }
-      subtotal = tempSubtotal;
-      discountTotal = 0;
-      finalTotal = tempSubtotal;
-    }
 
-    isCalculating = false;
-    notifyListeners();
+      if (currentVersion == _calculationVersion) {
+        isCalculating = false;
+        notifyListeners();
+      }
+    });
   }
 
   Future<bool> checkout(double paymentAmount) async {
@@ -152,14 +174,26 @@ class PosProvider with ChangeNotifier {
       subtotal = 0;
       discountTotal = 0;
       finalTotal = 0;
+      calculatedItems = [];
       isLoading = false;
       notifyListeners();
+      
+      // Refresh menus to update stock after checkout
+      await loadData();
+      
       return true;
     } catch (e) {
       isLoading = false;
       errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
+    }
+  }
+  Future<Map<String, dynamic>> getInvoiceData(String invoiceNumber) async {
+    try {
+      return await _transactionRepository.getInvoice(invoiceNumber);
+    } catch (e) {
+      rethrow;
     }
   }
 }

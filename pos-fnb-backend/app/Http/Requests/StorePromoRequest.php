@@ -28,6 +28,7 @@ class StorePromoRequest extends FormRequest
             'quota' => 'nullable|integer|min:1',
             'is_active' => 'boolean',
             'menu_id' => 'nullable|exists:menus,id',
+            'free_menu_id' => 'nullable|required_if:type,bogo|exists:menus,id',
         ];
     }
 }

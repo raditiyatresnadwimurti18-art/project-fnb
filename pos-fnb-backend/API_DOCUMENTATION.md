@@ -426,7 +426,8 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
       "apply_multiple": true,
       "start_date": "2026-08-15 00:00:00",
       "end_date": "2026-08-30 23:59:59",
-      "menu_id": 5
+      "menu_id": 5,
+      "free_menu_id": 7
   }
   ```
 
@@ -446,6 +447,7 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
   | `quota`          | integer | ❌                       | Kuota penggunaan (null = unlimited)          |
   | `is_active`      | boolean | ❌                       | Default: true                                |
   | `menu_id`        | integer | ❌                       | Jika diisi, promo hanya berlaku untuk menu ini |
+  | `free_menu_id`   | integer | ✅ (jika type=bogo)     | ID menu gratis yang diberikan                |
 
 - **Response Sukses (201):**
   ```json
@@ -539,6 +541,15 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
                   "price": 20000,
                   "subtotal": 80000,
                   "modal": "12000.00"
+              },
+              {
+                  "menu_id": 7,
+                  "qty": 2,
+                  "price": 0,
+                  "subtotal": 0,
+                  "modal": "5000.00",
+                  "is_free": true,
+                  "promo_name": "Beli 2 Nasi Goreng Gratis 2 Es Teh"
               }
           ],
           "promo_id": 1
@@ -734,6 +745,7 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
               "total_discount": 100000,
               "net_revenue": 7500000,
               "total_cogs": 4000000,
+              "promo_expense": 200000,
               "gross_profit": 3500000,
               "total_inventory_asset": 1500000
           },
@@ -765,6 +777,14 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
                       "username": "budikasir"
                   }
               }
+          ],
+          "invoices": [
+              {
+                  "invoice_number": "INV-20260816-AB123C",
+                  "total_amount": "42500.00",
+                  "created_at": "2026-08-16T12:00:00.000000Z",
+                  "kasir_name": "Administrator"
+              }
           ]
       }
   }
@@ -778,9 +798,14 @@ Gunakan daftar ini sebagai referensi utama saat Anda menguji di Postman atau men
   | `gross_revenue`    | Total pendapatan kotor (sebelum diskon)         |
   | `total_discount`   | Total potongan dari promo                       |
   | `net_revenue`      | Pendapatan bersih (`gross_revenue - discount`)  |
-  | `total_cogs`       | Total Harga Pokok Penjualan (modal via FIFO)    |
+  | `total_cogs`       | Total Harga Pokok Penjualan (modal barang terjual normal) |
+  | `promo_expense`    | Total Biaya Promo (modal dari barang gratis BOGO) |
   | `gross_profit`     | Laba Kotor (`net_revenue - total_cogs`)         |
   | `total_inventory_asset` | Total nilai persediaan barang yang belum terjual |
+
+  **Catatan untuk `promo_analytics`:**
+  - `total_discount_given` untuk promo Diskon adalah total `discount_amount` dari struk.
+  - `total_discount_given` untuk promo BOGO adalah total harga jual (harga normal) dari item-item yang dibagikan secara gratis.
 
 ---
 

@@ -45,11 +45,16 @@ class ReportController extends Controller
             }
             $salesByMenuRaw[$item->menu_id]['qty_sold'] += $item->qty;
             $salesByMenuRaw[$item->menu_id]['gross_revenue'] += $item->subtotal;
-            $salesByMenuRaw[$item->menu_id]['cogs'] += $item->modal_saat_ini;
+            if (!$item->is_free) {
+                $salesByMenuRaw[$item->menu_id]['cogs'] += $item->modal_saat_ini;
+            }
         }
 
-        // Total Modal (COGS/HPP) = total harga modal dari barang yang TERJUAL pada transaksi di periode tersebut
-        $totalCogs = $items->sum('modal_saat_ini');
+        // Total Modal (COGS/HPP) = total harga modal dari barang yang TERJUAL NORMAL pada transaksi di periode tersebut
+        $totalCogs = $items->where('is_free', false)->sum('modal_saat_ini');
+
+        // Biaya Promo (Promo Expense) = total harga modal dari barang GRATIS (BOGO)
+        $promoExpense = $items->where('is_free', true)->sum('modal_saat_ini');
 
         // Laba Kotor (Gross Profit) = Pendapatan Bersih (Net Revenue) - Harga Pokok Penjualan (COGS)
         $grossProfit = $netRevenue - $totalCogs;
@@ -68,7 +73,7 @@ class ReportController extends Controller
         });
 
         // Promo Analytics
-        $promoAnalyticsRaw = Transaction::with('promo')
+        $promoAnalyticsRaw = Transaction::with(['promo', 'items.menu'])
             ->whereNotNull('promo_id')
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->get();
@@ -83,8 +88,19 @@ class ReportController extends Controller
                     'total_discount_given' => 0,
                 ];
             }
+            
+            $discountGiven = (float) $tx->discount_amount;
+            
+            if ($tx->promo && $tx->promo->type === 'bogo') {
+                foreach ($tx->items as $item) {
+                    if ($item->is_free && $item->menu) {
+                        $discountGiven += ($item->qty * $item->menu->price);
+                    }
+                }
+            }
+            
             $promoAnalyticsAssoc[$tx->promo_id]['times_used'] += 1;
-            $promoAnalyticsAssoc[$tx->promo_id]['total_discount_given'] += $tx->discount_amount;
+            $promoAnalyticsAssoc[$tx->promo_id]['total_discount_given'] += $discountGiven;
         }
         $promoAnalytics = array_values($promoAnalyticsAssoc);
 
@@ -94,6 +110,20 @@ class ReportController extends Controller
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->groupBy('user_id')
             ->get();
+
+        // Format Invoices for frontend
+        $invoices = Transaction::with('user:id,name,username')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($tx) {
+                return [
+                    'invoice_number' => $tx->invoice_number,
+                    'total_amount' => $tx->total_amount,
+                    'created_at' => $tx->created_at,
+                    'kasir_name' => $tx->user ? $tx->user->name : 'Unknown',
+                ];
+            });
 
         return response()->json([
             'data' => [
@@ -107,12 +137,14 @@ class ReportController extends Controller
                     'total_discount' => $totalDiscount,
                     'net_revenue' => $netRevenue,
                     'total_cogs' => $totalCogs,
+                    'promo_expense' => $promoExpense,
                     'gross_profit' => $grossProfit,
                     'total_inventory_asset' => $totalInventoryAsset,
                 ],
                 'sales_by_menu' => $salesByMenu,
                 'promo_analytics' => $promoAnalytics,
                 'sales_by_kasir' => $salesByKasir,
+                'invoices' => $invoices,
             ]
         ]);
     }

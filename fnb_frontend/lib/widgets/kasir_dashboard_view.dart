@@ -52,7 +52,7 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
           const SnackBar(content: Text('Akun kasir berhasil dihapus')),
         );
       } else {
-        final err = Provider.of<AdminKasirProvider>(context, listen: false).errorMessage;
+        final err = Provider.of<AdminKasirProvider>(context, listen: false).actionErrorMessage;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(err ?? 'Gagal menghapus kasir')),
         );
@@ -70,109 +70,133 @@ class _KasirDashboardViewState extends State<KasirDashboardView> {
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isEdit ? 'Edit Kasir' : 'Tambah Kasir Baru'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nama Lengkap *'),
-                  validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+      barrierDismissible: false,
+      builder: (context) {
+        bool isLoading = false;
+        String? errorMessage;
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: Text(isEdit ? 'Edit Kasir' : 'Tambah Kasir Baru'),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13))),
+                          ],
+                        ),
+                      ),
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Nama Lengkap *'),
+                      validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: usernameController,
+                      decoration: const InputDecoration(labelText: 'Username *'),
+                      autofillHints: const [],
+                      validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email *'),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Wajib diisi';
+                        if (!v.contains('@')) return 'Format email tidak valid';
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: passwordController,
+                      decoration: InputDecoration(
+                        labelText: isEdit ? 'Password Baru (Kosongkan jika tidak diubah)' : 'Password *',
+                      ),
+                      obscureText: true,
+                      autofillHints: const [],
+                      validator: (v) {
+                        if (!isEdit && v!.isEmpty) {
+                          return 'Password wajib diisi untuk kasir baru';
+                        }
+                        if (v!.isNotEmpty && v.length < 6) {
+                          return 'Password minimal 6 karakter';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                TextFormField(
-                  controller: usernameController,
-                  decoration: const InputDecoration(labelText: 'Username *'),
-                  autofillHints: const [],
-                  validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
-                ),
-                TextFormField(
-                  controller: emailController,
-                  decoration: const InputDecoration(labelText: 'Email *'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Wajib diisi';
-                    if (!v.contains('@')) return 'Format email tidak valid';
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: passwordController,
-                  decoration: InputDecoration(
-                    labelText: isEdit ? 'Password Baru (Kosongkan jika tidak diubah)' : 'Password *',
-                  ),
-                  obscureText: true,
-                  autofillHints: const [],
-                  validator: (v) {
-                    if (!isEdit && v!.isEmpty) {
-                      return 'Password wajib diisi untuk kasir baru';
-                    }
-                    if (v!.isNotEmpty && v.length < 6) {
-                      return 'Password minimal 6 karakter';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                final newKasir = UserModel(
-                  id: kasir?.id,
-                  name: nameController.text,
-                  username: usernameController.text,
-                  email: emailController.text,
-                  role: 'kasir',
-                );
-                Navigator.pop(context, {
-                  'kasir': newKasir,
-                  'password': passwordController.text,
-                });
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    ).then((result) async {
-      if (result != null && result is Map) {
-        final kasirData = result['kasir'] as UserModel;
-        final passData = result['password'] as String;
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: isLoading ? null : () async {
+                  if (formKey.currentState!.validate()) {
+                    setStateDialog(() {
+                      isLoading = true;
+                      errorMessage = null;
+                    });
 
-        if (!mounted) return;
-        final provider = Provider.of<AdminKasirProvider>(context, listen: false);
-        bool success;
-        
-        if (isEdit) {
-          success = await provider.updateKasir(kasirData, passData.isEmpty ? null : passData);
-        } else {
-          success = await provider.createKasir(kasirData, passData);
-        }
+                    final newKasir = UserModel(
+                      id: kasir?.id,
+                      name: nameController.text,
+                      username: usernameController.text,
+                      email: emailController.text,
+                      role: 'kasir',
+                    );
 
-        if (!mounted) return;
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Berhasil menyimpan data kasir')),
-          );
-        } else {
-          final err = provider.errorMessage;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(err ?? 'Gagal menyimpan data kasir')),
-          );
-        }
-      }
-    });
+                    final provider = Provider.of<AdminKasirProvider>(context, listen: false);
+                    bool success;
+                    
+                    if (isEdit) {
+                      success = await provider.updateKasir(newKasir, passwordController.text.isEmpty ? null : passwordController.text);
+                    } else {
+                      success = await provider.createKasir(newKasir, passwordController.text);
+                    }
+
+                    if (context.mounted) {
+                      if (success) {
+                        Navigator.pop(context); // Close dialog only on success
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Berhasil menyimpan data kasir')),
+                        );
+                      } else {
+                        setStateDialog(() {
+                          isLoading = false;
+                          errorMessage = provider.actionErrorMessage ?? 'Gagal menyimpan data kasir';
+                        });
+                      }
+                    }
+                  }
+                },
+                child: isLoading 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                  : const Text('Simpan'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
