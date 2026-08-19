@@ -163,6 +163,7 @@ Semua endpoint memiliki awalan `/api`. Response dikembalikan murni dalam bentuk 
 ## 5. Update VPS (Linux)
 
 ```bash
+jika ingin meng update seed baru (php artisan migrate:fresh --seed)
 cd /var/www/folder_project/pos-fnb-backend
 sudo ./update.sh
 ```
